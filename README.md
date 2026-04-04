@@ -34,16 +34,17 @@ Claude teaches concepts through notes and guides you through exercises you imple
 
 These enhance the experience but aren't required:
 
-| Plugin/MCP | What it enables | Install |
+| Plugin/Skill | What it enables | Install |
 |---|---|---|
 | context7 | Live framework/library documentation in lessons | `/install context7@claude-plugins-official` |
 | Playwright | Browser preview for visual diagrams | `/install playwright@claude-plugins-official` |
+| [visual-explainer](https://github.com/nicobailon/visual-explainer) | Self-contained HTML diagrams and visualizations for lesson content | Copy to `~/.claude/skills/visual-explainer/` |
 
 ### Optional
 
 | Plugin/MCP | What it enables |
 |---|---|
-| NotebookLM MCP | PDF textbook ingestion + semantic querying via Google NotebookLM (see below) |
+| [NotebookLM MCP](https://github.com/jacob-bd/notebooklm-mcp-cli) | PDF textbook ingestion + semantic querying via Google NotebookLM (see below) |
 | LSP plugins (gopls, pyright, etc.) | Real-time code validation during exercise review |
 | pdfkb-mcp or rag-cli | Local PDF RAG (alternative to NotebookLM) |
 | calibre or pandoc | Ebook format conversion (epub/mobi → PDF for ingestion) |
@@ -52,7 +53,7 @@ These enhance the experience but aren't required:
 
 NotebookLM is **free for any Google account** — no paid subscription, API key, or Google Cloud project required. The free tier (100 notebooks, 50 sources/notebook, 50 queries/day) is more than enough for studying.
 
-To set up:
+Built by [Jacob Ben-David](https://github.com/jacob-bd). To set up:
 1. Install the MCP server: `uv tool install notebooklm-mcp-cli`
 2. Authenticate: `nlm login` (opens browser for one-time Google sign-in)
 3. Connect to Claude Code: `nlm setup add claude-code`
