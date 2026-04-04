@@ -1,0 +1,41 @@
+[
+  {
+    "id": "go-basics-1",
+    "topic": "Go Basics",
+    "lesson_num": 1,
+    "state": 0,
+    "difficulty": 0,
+    "stability": 0,
+    "due": "2026-03-31T12:00:00Z",
+    "last_review": "0001-01-01T00:00:00Z",
+    "reviews": 0,
+    "lapses": 0,
+    "elapsed_days": 0
+  },
+  {
+    "id": "go-concurrency-2",
+    "topic": "Go Concurrency",
+    "lesson_num": 2,
+    "state": 2,
+    "difficulty": 5.2,
+    "stability": 8.5,
+    "due": "2026-04-05T12:00:00Z",
+    "last_review": "2026-03-28T12:00:00Z",
+    "reviews": 3,
+    "lapses": 0,
+    "elapsed_days": 4
+  },
+  {
+    "id": "go-interfaces-3",
+    "topic": "Go Interfaces",
+    "lesson_num": 3,
+    "state": 1,
+    "difficulty": 7.1,
+    "stability": 1.5,
+    "due": "2026-03-30T12:00:00Z",
+    "last_review": "2026-03-29T12:00:00Z",
+    "reviews": 2,
+    "lapses": 1,
+    "elapsed_days": 1
+  }
+]

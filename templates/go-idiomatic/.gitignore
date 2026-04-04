@@ -1,0 +1,12 @@
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+vendor/
+go.work
+go.work.sum
+.env
+.env.local
