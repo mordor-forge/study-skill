@@ -14,7 +14,7 @@ A structured learning environment where **you write the code**, and Claude teach
 - **You do the work** — Claude teaches and supervises, you implement
 - **Structured lessons** — each lesson = notes + exercise + review
 - **Spaced repetition** — FSRS algorithm resurfaces concepts before you forget
-- **Research-backed content** — lessons enriched by live docs, notebooks, web research
+- **Research-backed content** — lessons enriched by live docs, notebooks, web research, and sciagent-skills domain expertise
 - **ADHD-aware** — energy gating, capped reviews, no guilt, detailed break state
 - **Git-tracked progress** — all attempts saved, safe to experiment
 
@@ -29,6 +29,7 @@ Initialize a new study workspace.
 1. Sanitize topic to directory name, create workspace, `git init`
 2. **Template resolution** — read `references/template-resolution.md`:
    - Auto-detect language from topic → select template + mode (code-as-subject or code-as-tool)
+   - Detect scientific domain → attach matching sciagent-skills if plugin is installed
    - Copy template files, create `lessons/`, `practice/`, `notes/`, `.fsrs/`
 3. **Ask learning approach** (AskUserQuestion):
    ```
@@ -38,6 +39,7 @@ Initialize a new study workspace.
    3. Challenge-based — progressive difficulty, minimal hand-holding
    ```
    If **project**: ask what to build → store as `end_goal`, create `lessons/plan.md` outline
+   If **project** and `sciagent_skills` are attached: use the primary skill's Workflow steps as a lesson plan backbone. Each workflow step maps to a lesson — read `references/research-agents.md` for how to extract skill content.
 4. **Source material** — if `--source` provided:
    - Read `references/research-agents.md` for backend selection
    - NotebookLM available → create notebook, add PDF as source
@@ -93,6 +95,7 @@ LOOP:
 
   3. Review & Feedback
      - Check git diff to see user's work
+     - If sciagent skill attached: read references/difficulty-adaptation.md for verification protocol
      - Provide specific feedback (quote their code, explain why)
      - Track metrics: review_rounds, hints_requested
      - Update session_state.phase = "reviewing"
@@ -255,15 +258,17 @@ Agent(subagent_type="general-purpose", prompt="
 
 For SVG generation (circuits, molecules, etc.), generate a Python script, run it via Bash, and embed the SVG in the HTML.
 
+For scientific topics with sciagent-skills attached, the plugin's visualization skills (`matplotlib-scientific-plotting`, `plotly-interactive-visualization`, `seaborn-statistical-visualization`) provide domain-appropriate plotting patterns (volcano plots, UMAP embeddings, heatmaps, survival curves). Pass the relevant sciagent visualization skill name to the visual-explainer agent for domain-specific output.
+
 If visual-explainer is unavailable, use ASCII diagrams in the lesson notes. Visuals are enrichment, never a dependency.
 
-## Config Schema (v2)
+## Config Schema (v3)
 
 `.study-config.json`:
 
 ```json
 {
-  "version": 2,
+  "version": 3,
   "topic": "Go Concurrency",
   "template": "go-idiomatic",
   "template_mode": "code-as-subject",
@@ -274,6 +279,8 @@ If visual-explainer is unavailable, use ASCII diagrams in the lesson notes. Visu
   "next_calibration_at_lesson": 4,
   "mode": "tutorial",
   "created": "2026-04-04T10:00:00Z",
+  "sciagent_skills": [],
+  "sciagent_primary": null,
   "progress": {
     "current_lesson": 0,
     "lessons_completed": 0,

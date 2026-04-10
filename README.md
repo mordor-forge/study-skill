@@ -36,6 +36,7 @@ These enhance the experience but aren't required:
 
 | Plugin/Skill | What it enables | Install |
 |---|---|---|
+| [SciAgent-Skills](https://github.com/jaechang-hits/SciAgent-Skills) | 197 curated bioinformatics & life science skills — domain-aware lessons, parameter tables, troubleshooting, exercise verification for scientific topics | `/plugin marketplace add jaechang-hits/SciAgent-Skills && /plugin install sciagent-skills` |
 | context7 | Live framework/library documentation in lessons | `/install context7@claude-plugins-official` |
 | Playwright | Browser preview for visual diagrams | `/install playwright@claude-plugins-official` |
 | [visual-explainer](https://github.com/nicobailon/visual-explainer) | Self-contained HTML diagrams and visualizations for lesson content | Copy to `~/.claude/skills/visual-explainer/` |
@@ -68,6 +69,7 @@ The skill adapts to what's available. Nothing crashes if a plugin is missing:
 
 | Feature | With plugin | Without plugin |
 |---|---|---|
+| Scientific domains | Curated workflows, parameter tables, troubleshooting via SciAgent-Skills | Falls through to web search |
 | Lesson research | Live docs via context7 | Claude's training knowledge |
 | Source material | Semantic search via NotebookLM | Grep over extracted text, or skipped |
 | Concept diagrams | HTML via visual-explainer | ASCII diagrams in lesson notes |
@@ -139,6 +141,27 @@ Backend priority:
 1. **NotebookLM** — creates a notebook, adds PDF, queries semantically
 2. **Local RAG** — uses pdfkb-mcp or rag-cli for local indexing
 3. **Chunked text** — extracts text, saves as searchable markdown files
+
+## SciAgent-Skills Integration
+
+When the [SciAgent-Skills](https://github.com/jaechang-hits/SciAgent-Skills) plugin is installed (built by [Jaechang Hits](https://github.com/jaechang-hits)), the study skill becomes domain-aware for 197 scientific topics across bioinformatics, cheminformatics, biostatistics, proteomics, drug discovery, scientific computing, and more.
+
+**What it enables:**
+
+- **Automatic domain detection** — `study init "scRNA-seq analysis"` detects the genomics domain and attaches the `scanpy-scrna-seq` skill. Multi-tool pipelines (e.g., STAR → featureCounts → DESeq2) attach multiple skills in execution order.
+- **Curated lesson content** — lessons are enriched with validated workflows, key parameter tables, and common recipes from the matched skill instead of relying on generic web search.
+- **Parameter-based difficulty scaling** — beginner exercises use default parameters, intermediate exercises require tuning, advanced exercises demand justification, and expert exercises give datasets where defaults deliberately fail.
+- **Exercise verification** — during review, the skill cross-references your implementation against sciagent's Common Recipes as a private structural check (never shown to you).
+- **Troubleshooting as hints** — when stuck, the skill checks the matched sciagent skill's troubleshooting table before spawning a research agent.
+
+**Install:**
+
+```bash
+/plugin marketplace add jaechang-hits/SciAgent-Skills
+/plugin install sciagent-skills
+```
+
+The skill works without SciAgent-Skills installed — scientific topics fall back to web search.
 
 ## Spaced Repetition (FSRS)
 

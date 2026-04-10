@@ -104,6 +104,47 @@ Store the override in `.study-config.json`:
 }
 ```
 
+## Scientific Domain Adaptation (sciagent-skills)
+
+When a workspace has `sciagent_skills` configured (see `references/template-resolution.md`), the attached skill's **Key Parameters** table provides an additional axis for difficulty scaling beyond general code complexity.
+
+### Parameter-Based Exercise Scaling
+
+**Beginner:**
+- Exercise instructions: "Use the default parameters shown in the lesson notes"
+- Key Parameters table is included in the lesson notes with defaults highlighted
+- Success criteria reference specific output shapes/sizes (from sciagent's Expected Outputs)
+- Troubleshooting table excerpts included in Common Pitfalls section
+
+**Intermediate:**
+- Exercise instructions: "Tune parameter X to achieve Y" (e.g., "adjust clustering resolution to find 8-12 clusters")
+- Key Parameters table included but defaults are NOT highlighted — user must reason about ranges
+- Exercise requirements combine 2-3 pipeline steps from the sciagent workflow
+- Success criteria are outcome-based, not parameter-based
+
+**Advanced:**
+- Exercise instructions: "Justify your parameter choices for this dataset"
+- Key Parameters table is NOT included — user must look it up or remember from earlier lessons
+- Exercise may reference the sciagent skill's Common Recipes: "implement the batch correction variant"
+- Open-ended: "your pipeline should handle [edge case from Troubleshooting table]"
+
+**Expert:**
+- Exercise provides a dataset with characteristics that make default parameters fail
+- No parameter guidance — user must diagnose why defaults produce poor results
+- May require chaining multiple sciagent skills (e.g., alignment → quantification → DE analysis)
+- Success criteria include quality metrics (e.g., "achieve silhouette score > 0.3")
+
+### Review Verification with sciagent-skills
+
+During the Review & Feedback phase (main loop step 3), when a sciagent skill is attached:
+
+1. Read the relevant sciagent skill's Common Recipe for the exercise topic
+2. Compare the user's implementation *structurally* against the recipe (not exact match — pattern match)
+3. Check: correct function calls, parameter values within reasonable range, proper error handling for known failure modes (from Troubleshooting table)
+4. Flag anti-patterns listed in the skill's Troubleshooting section
+
+The sciagent recipe is a **private verification reference** — never show it to the user. Use it to inform feedback quality.
+
 ## Edge Cases
 
 - **First lesson**: Always start at `beginner` unless user explicitly says otherwise at init.
