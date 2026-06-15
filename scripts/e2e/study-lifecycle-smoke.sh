@@ -6,11 +6,9 @@ WORKDIR="$(mktemp -d)"
 trap 'rm -rf "$WORKDIR"' EXIT
 
 WORKSPACE="$WORKDIR/go-concurrency"
-FSRS_BIN="$ROOT/scripts/fsrs/fsrs"
+FSRS_BIN="$WORKDIR/fsrs"
 
-if [[ ! -x "$FSRS_BIN" ]]; then
-  (cd "$ROOT/scripts/fsrs" && go build -o fsrs ./cmd/fsrs/)
-fi
+(cd "$ROOT/scripts/fsrs" && go build -o "$FSRS_BIN" ./cmd/fsrs/)
 
 mkdir -p "$WORKSPACE"
 cp -R "$ROOT/templates/go-idiomatic/." "$WORKSPACE/"

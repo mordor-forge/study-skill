@@ -39,6 +39,11 @@ class TestScoreBook:
         score = score_book(book, "physics")
         assert score >= 1
 
+    def test_single_letter_language_token_does_not_substring_match_category(self):
+        book = _book("Unrelated Book", category="Science", topics=[])
+        score = score_book(book, "C programming")
+        assert score == 0
+
     def test_no_match(self):
         book = _book("Cooking Recipes", category="Food", topics=["cooking"])
         score = score_book(book, "quantum field theory")

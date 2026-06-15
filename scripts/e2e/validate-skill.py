@@ -10,15 +10,18 @@ import yaml
 
 
 def _frontmatter(text: str) -> str:
-    if not text.startswith("---\n"):
+    delimiter = "---\n"
+    if not text.startswith(delimiter):
         msg = "SKILL.md must start with YAML frontmatter delimiter '---'"
         raise ValueError(msg)
 
-    try:
-        return text.split("---\n", 2)[1]
-    except IndexError as exc:
+    body = text[len(delimiter) :]
+    end = body.find(delimiter)
+    if end == -1:
         msg = "SKILL.md must close YAML frontmatter with '---'"
-        raise ValueError(msg) from exc
+        raise ValueError(msg)
+
+    return body[:end]
 
 
 def validate(path: Path) -> None:

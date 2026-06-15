@@ -32,7 +32,6 @@ def score_book(book: Book, query: str) -> int:
     score = 0
     query_lower = query.lower().strip()
     title_lower = book.title.lower()
-    category_lower = book.category.lower()
 
     # Exact title match
     if query_lower == title_lower:
@@ -52,7 +51,8 @@ def score_book(book: Book, query: str) -> int:
     score += 3 * len(overlap)
 
     # Category match
-    if query_lower in category_lower or any(w in category_lower for w in query_words):
+    category_words = _tokenize(book.category)
+    if query_words & category_words:
         score += 1
 
     return score

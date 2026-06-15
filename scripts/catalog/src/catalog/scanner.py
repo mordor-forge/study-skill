@@ -169,27 +169,29 @@ def scan_directory(
     books: list[Book] = []
 
     supported_formats = {fmt.lower() for fmt in ALL_BOOK_FORMATS}
-    discovered: list[tuple[Path, str]] = []
+    discovered: list[tuple[Path, str, bool]] = []
     for path in root.rglob("*"):
         if not path.is_file():
             continue
 
+        has_supported_suffix = path.suffix.lower() in supported_formats
         file_format = detect_book_format(path, supported_formats)
         if file_format is not None:
-            discovered.append((path, file_format))
+            discovered.append((path, file_format, has_supported_suffix))
 
     discovered.sort(key=lambda item: item[0])
 
-    for i, (book_path, file_format) in enumerate(discovered, 1):
+    for i, (book_path, file_format, has_supported_suffix) in enumerate(discovered, 1):
         rel = book_path.relative_to(root)
         parts = list(rel.parts)
 
         # Category = first directory component, or "uncategorized"
         category = dirname_to_title(parts[0]) if len(parts) > 1 else "Uncategorized"
 
-        # Title = filename without extension, humanized
-        stem = book_path.stem
-        title = dirname_to_title(stem)
+        # Title = filename without extension for known suffixes, or the full
+        # filename for magic-byte matches that may encode DOI-like identifiers.
+        title_name = book_path.stem if has_supported_suffix else book_path.name
+        title = dirname_to_title(title_name)
 
         # Derive topics from all path components
         topics = derive_topics(parts, title)

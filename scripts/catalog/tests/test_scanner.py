@@ -189,6 +189,8 @@ class TestScanDirectory:
         assert len(catalog.books) == 1
         assert catalog.books[0].format == "pdf"
         assert catalog.books[0].filename == "10 - Unknown.1007%2f978-1-4614-6227-9"
+        assert "1007%2F978" in catalog.books[0].title
+        assert "4614" in catalog.books[0].title
 
     def test_mobi_indexed(self, tmp_path):
         _create_fake_book(tmp_path / "Fiction" / "novel.mobi")
