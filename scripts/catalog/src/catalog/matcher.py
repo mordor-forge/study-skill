@@ -3,13 +3,18 @@
 from __future__ import annotations
 
 import re
+from typing import Any
 
 from catalog.models import Book
 
 
 def _tokenize(text: str) -> set[str]:
     """Split text into lowercase word tokens, stripping non-alphanumeric chars."""
-    return {w for w in re.findall(r"[a-z0-9]+", text.lower()) if len(w) > 1}
+    return {
+        word
+        for word in re.findall(r"[a-z0-9]+", text.lower())
+        if len(word) > 1 or word in {"c", "r"}
+    }
 
 
 def score_book(book: Book, query: str) -> int:
@@ -57,13 +62,13 @@ def rank_books(
     books: list[Book],
     query: str,
     top_n: int = 10,
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     """Score and rank books against a query.
 
     Returns top N results (excluding zero-score books) as dicts
     with the book data plus a 'score' field, sorted by descending score.
     """
-    scored = []
+    scored: list[dict[str, Any]] = []
     for book in books:
         s = score_book(book, query)
         if s > 0:

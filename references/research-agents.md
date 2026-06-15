@@ -4,13 +4,17 @@ Read this file when: creating a new lesson (Tier 1 proactive research) or when t
 
 ## Tier 1: Proactive Research (Lesson Creation)
 
-When writing a new lesson, spawn research agents in the background to ensure content is current and authoritative. The lesson outline can be written immediately — enrich it when research completes.
+When writing a new lesson, use background research agents if the current client
+supports them. Otherwise, do the research inline before finalizing the lesson.
+The lesson outline can be written immediately; enrich it when research completes.
 
 ### Dispatch Protocol
 
-Detect the topic category and spawn the appropriate agent:
+Detect the topic category and use the appropriate research path:
 
 **Programming language or framework:**
+
+Claude Code-style background task example:
 ```
 Agent(subagent_type="general-purpose", run_in_background=true, prompt="
   Use the context7 plugin to research [specific concept].
@@ -22,6 +26,8 @@ Agent(subagent_type="general-purpose", run_in_background=true, prompt="
 ```
 
 **Topic covered by NotebookLM notebooks:**
+
+Claude Code-style background task example:
 ```
 Agent(subagent_type="nlm-researcher", run_in_background=true, prompt="
   Query NotebookLM for [concept].
@@ -51,7 +57,8 @@ Detection: check the topic against sciagent domain keywords:
 | Lab automation | liquid handling, Opentrons, protocol, plate reader, LIMS |
 | Scientific writing | manuscript, peer review, figure preparation, citation, journal submission |
 
-If a keyword match is found, resolve the best-matching sciagent skill name(s) and invoke:
+If a keyword match is found, resolve the best-matching sciagent skill name(s).
+Claude Code-style background task example:
 
 ```
 Agent(subagent_type="general-purpose", run_in_background=true, prompt="
@@ -72,6 +79,8 @@ If the topic spans multiple skills (e.g., an RNA-seq pipeline touching STAR, fea
 If no sciagent skill matches or the plugin is not installed, fall through to general web search.
 
 **General or emerging topic:**
+
+Claude Code-style background task example:
 ```
 Agent(subagent_type="general-purpose", run_in_background=true, prompt="
   Research [concept] using WebSearch and WebFetch.
@@ -85,7 +94,7 @@ Agent(subagent_type="general-purpose", run_in_background=true, prompt="
 When research completes, weave findings into the lesson notes:
 - Add source attribution: "According to the official Go docs..."
 - Use researched examples as reference material (not as exercise solutions)
-- Flag any discrepancies between Claude's training knowledge and current docs
+- Flag any discrepancies between the model's built-in knowledge and current docs
 
 ## Tier 2: On-Demand Research (During Exercises)
 
@@ -99,7 +108,7 @@ Triggered when the user says "I'm stuck", "go deeper", "I need more context", or
 - **"How does X work in practice?"** → web research (articles, blog posts, examples)
 - **Source material question** → NotebookLM query against the workspace's source PDF
 
-Spawn a **single** targeted agent, not all three. Match the question to the right tool.
+Use a **single** targeted research path, not all three. Match the question to the right tool.
 
 ### Presenting Results
 
@@ -132,7 +141,7 @@ The skill detects available tools at runtime. If a tool is missing, it falls bac
 
 | Integration | If available | If missing | Detection |
 |---|---|---|---|
-| context7 plugin | Live framework/library docs | Claude's training knowledge | Check if `mcp__plugin_context7_context7__resolve-library-id` tool exists |
+| context7 plugin | Live framework/library docs | Model's built-in knowledge | Check if `mcp__plugin_context7_context7__resolve-library-id` tool exists |
 | NotebookLM MCP | Deep research from notebooks | Skipped, no impact | Check if `mcp__notebooklm-mcp__notebook_query` tool exists |
 | sciagent-skills plugin | Curated scientific workflows, parameter tables, troubleshooting | Falls through to web search for scientific topics | Check if `sciagent-skills:*` skills appear in available skills list |
 | WebSearch | Current articles and examples | Training knowledge only | Check if `WebSearch` tool exists |

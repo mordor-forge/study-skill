@@ -120,9 +120,9 @@ func TestCLIAddCard(t *testing.T) {
 	}
 
 	var card struct {
-		ID       string `json:"id"`
-		Topic    string `json:"topic"`
-		LessonNum int   `json:"lesson_num"`
+		ID        string `json:"id"`
+		Topic     string `json:"topic"`
+		LessonNum int    `json:"lesson_num"`
 	}
 	if err := json.Unmarshal([]byte(stdout), &card); err != nil {
 		t.Fatalf("failed to parse JSON: %v\noutput: %s", err, stdout)

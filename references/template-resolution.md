@@ -85,9 +85,11 @@ Templates are searched in this order:
 1. **User custom**: `~/.config/study/templates/<name>/`
 2. **Skill built-in**: `<skill-directory>/templates/<name>/`
 
-The skill's own directory can be found relative to the SKILL.md file. Use the Bash tool to resolve:
+The skill's own directory is the directory containing the loaded `SKILL.md`.
+Agent clients expose that path differently; see `references/agent-adapters.md`.
+If the agent only has a copied skill directory path, use that path directly:
 ```bash
-SKILL_DIR=$(dirname "$(find ~/.claude/skills/study -name SKILL.md 2>/dev/null | head -1)")
+SKILL_DIR=/path/to/study
 ```
 
 If a user-custom template exists with the same name as a built-in, the user-custom takes precedence. This lets users override templates without modifying the skill.

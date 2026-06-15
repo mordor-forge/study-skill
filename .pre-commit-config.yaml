@@ -1,0 +1,33 @@
+repos:
+  - repo: local
+    hooks:
+      - id: validate-study-skill
+        name: validate study skill
+        entry: bash -c 'cd scripts/catalog && uv run python ../../scripts/e2e/validate-skill.py ../../SKILL.md'
+        language: system
+        pass_filenames: false
+      - id: catalog-ruff
+        name: catalog ruff
+        entry: bash -c 'cd scripts/catalog && uv run ruff check src tests'
+        language: system
+        pass_filenames: false
+      - id: catalog-pyright
+        name: catalog pyright
+        entry: bash -c 'cd scripts/catalog && uv run pyright src'
+        language: system
+        pass_filenames: false
+      - id: fsrs-gofmt
+        name: fsrs gofmt
+        entry: bash -c 'cd scripts/fsrs && test -z "$(gofmt -l .)"'
+        language: system
+        pass_filenames: false
+      - id: deterministic-tests
+        name: deterministic tests
+        entry: make test
+        language: system
+        pass_filenames: false
+      - id: lifecycle-smoke-test
+        name: study lifecycle smoke test
+        entry: scripts/e2e/study-lifecycle-smoke.sh
+        language: system
+        pass_filenames: false

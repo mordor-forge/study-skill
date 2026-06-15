@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 import sys
 from pathlib import Path
+from typing import Any, cast
 
 from catalog.converter import ALL_BOOK_FORMATS
 from catalog.models import Book, Catalog
@@ -72,6 +73,23 @@ TOPIC_KEYWORDS: dict[str, str] = {
 }
 
 
+def detect_book_format(path: Path, supported_formats: set[str] | None = None) -> str | None:
+    """Return the normalized supported book format for a path, if detectable."""
+    formats = supported_formats or {fmt.lower() for fmt in ALL_BOOK_FORMATS}
+    suffix = path.suffix.lower()
+    if suffix in formats:
+        return suffix.lstrip(".")
+
+    try:
+        with path.open("rb") as handle:
+            if handle.read(5) == b"%PDF-":
+                return "pdf"
+    except OSError:
+        return None
+
+    return None
+
+
 def dirname_to_title(name: str) -> str:
     """Convert a directory/file name to a human-readable title.
 
@@ -80,8 +98,9 @@ def dirname_to_title(name: str) -> str:
         intro-to-physics -> Intro To Physics
         some.book.name -> Some Book Name
     """
-    # Replace underscores, hyphens, and dots (except file extension dot) with spaces
-    cleaned = re.sub(r"[_\-]", " ", name)
+    # Replace common filename separators with spaces. Callers pass file stems,
+    # so dots here are title separators rather than extension separators.
+    cleaned = re.sub(r"[_\-.]", " ", name)
     # Collapse multiple spaces
     cleaned = re.sub(r"\s+", " ", cleaned).strip()
     # Title-case each word
@@ -107,7 +126,7 @@ def derive_topics(path_parts: list[str], title: str) -> list[str]:
     return sorted(topics)
 
 
-def _extract_pdf_metadata(pdf_path: Path) -> dict:
+def _extract_pdf_metadata(pdf_path: Path) -> dict[str, int | str | None]:
     """Extract metadata from a PDF file using pdfplumber.
 
     Returns dict with 'pages' and 'author' keys (values may be None).
@@ -117,7 +136,11 @@ def _extract_pdf_metadata(pdf_path: Path) -> dict:
 
         with pdfplumber.open(pdf_path) as pdf:
             pages = len(pdf.pages)
-            author = pdf.metadata.get("Author") if pdf.metadata else None
+            raw_metadata = getattr(pdf, "metadata", None)
+            metadata = cast("dict[str, Any] | None", raw_metadata)
+            author = metadata.get("Author") if metadata else None
+            if author is not None:
+                author = str(author)
             return {"pages": pages, "author": author}
     except Exception:
         # Silently skip metadata extraction failures — corrupt PDFs, etc.
@@ -145,13 +168,19 @@ def scan_directory(
 
     books: list[Book] = []
 
-    # Collect all supported book formats
-    all_files: list[Path] = []
-    for fmt in ALL_BOOK_FORMATS:
-        all_files.extend(root.rglob(f"*{fmt}"))
-    all_files.sort()
+    supported_formats = {fmt.lower() for fmt in ALL_BOOK_FORMATS}
+    discovered: list[tuple[Path, str]] = []
+    for path in root.rglob("*"):
+        if not path.is_file():
+            continue
 
-    for i, book_path in enumerate(all_files, 1):
+        file_format = detect_book_format(path, supported_formats)
+        if file_format is not None:
+            discovered.append((path, file_format))
+
+    discovered.sort(key=lambda item: item[0])
+
+    for i, (book_path, file_format) in enumerate(discovered, 1):
         rel = book_path.relative_to(root)
         parts = list(rel.parts)
 
@@ -165,10 +194,7 @@ def scan_directory(
         # Derive topics from all path components
         topics = derive_topics(parts, title)
 
-        # File format without dot
-        file_format = book_path.suffix.lower().lstrip(".")
-
-        book_kwargs: dict = {
+        book_kwargs: dict[str, Any] = {
             "title": title,
             "path": str(rel),
             "category": category,
@@ -179,7 +205,7 @@ def scan_directory(
         }
 
         if extract_metadata and file_format == "pdf":
-            print(f"  [{i}/{len(all_files)}] {rel}", file=sys.stderr)
+            print(f"  [{i}/{len(discovered)}] {rel}", file=sys.stderr)
             meta = _extract_pdf_metadata(book_path)
             book_kwargs["pages"] = meta["pages"]
             book_kwargs["author"] = meta["author"]

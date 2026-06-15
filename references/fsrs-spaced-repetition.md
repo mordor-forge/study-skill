@@ -16,7 +16,17 @@ Higher stability = longer intervals between reviews. Difficulty affects how quic
 
 ## Invoking the Go Binary
 
-The FSRS scheduler is a Go binary at `scripts/fsrs/cmd/fsrs/`. All commands output JSON to stdout.
+The FSRS scheduler is a Go binary in the installed study skill. Because `study start`
+runs from the generated study workspace, never invoke it via a workspace-relative
+`scripts/fsrs/...` path. Resolve `<skill-dir>` to the directory containing the
+study skill's `SKILL.md`, then call the built binary by absolute or skill-relative
+path:
+
+```bash
+FSRS_BIN="<skill-dir>/scripts/fsrs/fsrs"
+```
+
+All commands output JSON to stdout.
 
 Set the card store path via environment variable:
 ```bash
@@ -27,13 +37,13 @@ FSRS_STORE=.fsrs/cards.json
 
 **Add a card when a lesson is completed:**
 ```bash
-FSRS_STORE=.fsrs/cards.json scripts/fsrs/fsrs add "lesson-03" "Goroutine Channels" 3
+FSRS_STORE=.fsrs/cards.json "$FSRS_BIN" add "lesson-03" "Goroutine Channels" 3
 ```
 Output: the new card as JSON.
 
 **Check what's due for review:**
 ```bash
-FSRS_STORE=.fsrs/cards.json scripts/fsrs/fsrs schedule
+FSRS_STORE=.fsrs/cards.json "$FSRS_BIN" schedule
 ```
 Output:
 ```json
@@ -47,13 +57,13 @@ Output:
 
 **Record a review result:**
 ```bash
-FSRS_STORE=.fsrs/cards.json scripts/fsrs/fsrs review "lesson-01" 3
+FSRS_STORE=.fsrs/cards.json "$FSRS_BIN" review "lesson-01" 3
 ```
 Rating scale: 1=Again, 2=Hard, 3=Good, 4=Easy. Output: updated card with new due date.
 
 **Get overview of all cards:**
 ```bash
-FSRS_STORE=.fsrs/cards.json scripts/fsrs/fsrs status
+FSRS_STORE=.fsrs/cards.json "$FSRS_BIN" status
 ```
 
 ## Hybrid Review Model

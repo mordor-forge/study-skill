@@ -109,3 +109,22 @@ class TestRankBooks:
         assert "path" in r
         assert "category" in r
         assert "topics" in r
+
+    def test_single_letter_language_token_matches_c_books(self):
+        books = [
+            _book("The C Programming Language KR", category="Programming", topics=["programming"]),
+            _book("Effective C Robert C Seacord", category="Programming", topics=["programming"]),
+            _book(
+                "Python Programming Fundamentals",
+                category="Springer",
+                topics=["programming", "python"],
+            ),
+        ]
+        results = rank_books(books, "C programming", top_n=3)
+        titles = [result["title"] for result in results]
+
+        assert "The C Programming Language KR" in titles[:2]
+        assert "Effective C Robert C Seacord" in titles[:2]
+        assert titles.index("Effective C Robert C Seacord") < titles.index(
+            "Python Programming Fundamentals"
+        )

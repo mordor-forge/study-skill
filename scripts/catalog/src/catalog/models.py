@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -28,9 +29,9 @@ class Catalog(BaseModel):
 
     library_path: str
     built_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
-    books: list[Book] = Field(default_factory=list)
+    books: list[Book] = Field(default_factory=lambda: list[Book]())
 
-    def search(self, query: str, top_n: int = 10) -> list[dict]:
+    def search(self, query: str, top_n: int = 10) -> list[dict[str, Any]]:
         """Search the catalog using fuzzy matching.
 
         Delegates to matcher module to avoid circular imports.

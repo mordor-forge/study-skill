@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  catalog:
+    name: Python catalog
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: scripts/catalog
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: uv sync --all-groups
+      - name: Validate skill metadata
+        run: uv run python ../../scripts/e2e/validate-skill.py ../../SKILL.md
+      - name: Lint
+        run: uv run ruff check src tests
+      - name: Type check
+        run: uv run pyright src
+      - name: Test with coverage
+        run: uv run pytest --cov=src/catalog --cov-report=term-missing --cov-report=xml
+      - name: Upload catalog coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: catalog-coverage
+          path: scripts/catalog/coverage.xml
+
+  fsrs:
+    name: Go FSRS
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: scripts/fsrs
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+      - name: Format check
+        run: test -z "$(gofmt -l .)"
+      - name: Test
+        run: go test -race -coverprofile=coverage.out -covermode=atomic ./...
+      - name: Upload FSRS coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: fsrs-coverage
+          path: scripts/fsrs/coverage.out
+
+  lifecycle:
+    name: Study lifecycle smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+      - name: Run lifecycle smoke test
+        run: scripts/e2e/study-lifecycle-smoke.sh

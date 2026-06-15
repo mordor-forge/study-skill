@@ -28,8 +28,15 @@ select = ["E", "F", "I", "N", "W", "UP", "B", "A", "SIM"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
+
 [dependency-groups]
 dev = [
+    "pyright>=1.1.407",
+    "pyyaml>=6.0",
+    "pytest-cov>=7.0",
     "pytest>=8.0",
     "ruff>=0.8",
 ]

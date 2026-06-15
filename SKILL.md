@@ -1,22 +1,32 @@
 ---
 name: study
-description: Interactive learning tutor with spaced repetition, research agents, and ADHD-aware sessions. Creates structured study workspaces where Claude teaches concepts and guides you through exercises you implement yourself. Use this skill whenever the user wants to learn something new — "teach me", "I want to study", "help me learn", "study X", "create a course on", "tutorial for", "walk me through learning". Also triggers on "study init", "study start", "study status", "study review". Works for programming languages, frameworks, math, physics, science, engineering — any topic where structured learning helps.
-allowed-tools: Bash, Read, Write, Edit, Glob, Grep, WebFetch, WebSearch, AskUserQuestion, Agent
-argument-hint: [init <topic> [--template=<name>] [--source <path>] | start | status | review | add-source <path> | catalog build <path> | catalog search <query> | break]
+description: "Interactive learning tutor with spaced repetition, research helpers, and restart-safe study workspaces. Use when the user wants to learn something new: teach me, I want to study, help me learn, study X, create a course on, tutorial for, walk me through learning. Also use for commands like study init, study start, study status, study review, study break, and book catalog setup/search. Works across Claude Code, Codex, Hermes, Cline, OpenCode, and other Agent Skills-compatible clients for programming, math, physics, science, engineering, and other structured learning."
 ---
 
-# Study Workspace — Interactive Tutor
+# Study Workspace - Interactive Tutor
 
-A structured learning environment where **you write the code**, and Claude teaches, guides, and supervises. Every lesson has notes and exercises you implement yourself, with spaced repetition for long-term retention.
+A structured learning environment where **you write the code**, and the agent teaches, guides, and supervises. Every lesson has notes and exercises you implement yourself, with spaced repetition for long-term retention.
 
 ## Philosophy
 
-- **You do the work** — Claude teaches and supervises, you implement
-- **Structured lessons** — each lesson = notes + exercise + review
-- **Spaced repetition** — FSRS algorithm resurfaces concepts before you forget
-- **Research-backed content** — lessons enriched by live docs, notebooks, web research, and sciagent-skills domain expertise
-- **ADHD-aware** — energy gating, capped reviews, no guilt, detailed break state
-- **Git-tracked progress** — all attempts saved, safe to experiment
+- **You do the work** - The agent teaches and supervises, you implement
+- **Structured lessons** - each lesson = notes + exercise + review
+- **Spaced repetition** - FSRS algorithm resurfaces concepts before you forget
+- **Research-backed content** - lessons enriched by live docs, notebooks, web research, and sciagent-skills domain expertise
+- **ADHD-aware** - energy gating, capped reviews, no guilt, detailed break state
+- **Git-tracked progress** - all attempts saved, safe to experiment
+
+## Agent Compatibility
+
+This skill follows the open Agent Skills folder shape: `SKILL.md` plus optional
+`references/`, `templates/`, and `scripts/`. The durable behavior is the study
+workspace contract, not any single agent client's slash-command implementation.
+
+Before running a workflow in a new client, read:
+- `references/agent-adapters.md` for Claude Code, Codex, Hermes, Cline, OpenCode,
+  and generic agent setup.
+- `references/workspace-lifecycle.md` for the init/start/break/resume state
+  contract shared by all agents.
 
 ## Commands
 
@@ -26,12 +36,13 @@ Initialize a new study workspace.
 
 **Steps:**
 
+0. Read `references/workspace-lifecycle.md` for the shared workspace contract.
 1. Sanitize topic to directory name, create workspace, `git init`
 2. **Template resolution** — read `references/template-resolution.md`:
    - Auto-detect language from topic → select template + mode (code-as-subject or code-as-tool)
    - Detect scientific domain → attach matching sciagent-skills if plugin is installed
    - Copy template files, create `lessons/`, `practice/`, `notes/`, `.fsrs/`
-3. **Ask learning approach** (AskUserQuestion):
+3. **Ask learning approach**:
    ```
    How would you like to learn?
    1. Project-based — build something real, lesson by lesson (I'll ask what you want to build)
@@ -40,6 +51,9 @@ Initialize a new study workspace.
    ```
    If **project**: ask what to build → store as `end_goal`, create `lessons/plan.md` outline
    If **project** and `sciagent_skills` are attached: use the primary skill's Workflow steps as a lesson plan backbone. Each workflow step maps to a lesson — read `references/research-agents.md` for how to extract skill content.
+   - In clients without a dedicated question UI, ask in plain text and wait for
+     the user's answer. Do not silently choose the default unless the user asked
+     for non-interactive setup.
 4. **Source material** — if `--source` provided:
    - Read `references/research-agents.md` for backend selection
    - NotebookLM available → create notebook, add PDF as source
@@ -47,7 +61,10 @@ Initialize a new study workspace.
    - Store source info in config
 5. **Book catalog** — if `~/.config/study/book-catalog.json` exists:
    - Search catalog for topic matches
-   - Suggest relevant books: "Found 3 matching books in your library. Add as source?"
+   - Show the top relevant books with title, format, and path
+   - Ask: "Add any of these as source material? Reply with numbers, paths, or skip."
+   - Wait for the user's answer. Do not skip this prompt unless there are no
+     matches or the user asked for non-interactive setup.
 6. Create `.study-config.json` (see Config Schema below), commit, show welcome
 
 ### `study start`
@@ -55,6 +72,8 @@ Initialize a new study workspace.
 Start or resume a learning session.
 
 **Resumption — always check first:**
+
+Read `references/workspace-lifecycle.md` before mutating `.study-config.json`.
 
 1. Read `.study-config.json`
 2. If `session_state.phase` is NOT `idle`:
@@ -73,7 +92,8 @@ Start or resume a learning session.
    - Fumes → review only (lightweight) or suggest coming back later
 3. **Optional time budget**: "How long do you have? (or skip for open-ended)"
 4. **FSRS review warm-up** — read `references/fsrs-spaced-repetition.md`:
-   - Run: `FSRS_STORE=.fsrs/cards.json scripts/fsrs/fsrs schedule`
+   - Resolve `<skill-dir>` to the directory containing this `SKILL.md`
+   - Run: `FSRS_STORE=.fsrs/cards.json <skill-dir>/scripts/fsrs/fsrs schedule`
    - If items due: present max 3 as recall exercises (cap at 5 minutes)
    - If nothing due: skip to lesson
 5. **Main lesson loop** (see below)
@@ -82,10 +102,10 @@ Start or resume a learning session.
 
 ```
 LOOP:
-  1. Claude's Turn: Teach
+  1. Agent's Turn: Teach
      - Create lesson notes (with proactive research — read references/research-agents.md)
      - Assign exercise
-     - Commit notes: [claude] lesson N: topic
+     - Commit notes: [agent] lesson N: topic
      - Update session_state.phase = "teaching"
 
   2. User's Turn: Implement
@@ -102,7 +122,7 @@ LOOP:
 
   4. Completion
      - When exercise passes review:
-       - Add FSRS card: fsrs add "lesson-NN" "topic" N
+       - Add FSRS card: FSRS_STORE=.fsrs/cards.json <skill-dir>/scripts/fsrs/fsrs add "lesson-NN" "topic" N
        - Update lesson status to "completed"
        - Check difficulty adaptation (read references/difficulty-adaptation.md)
        - Ask: next lesson, review, or break?
@@ -112,7 +132,9 @@ LOOP:
 
 ### `study status`
 
-Show progress overview. If visual-explainer skill is available, generate an HTML dashboard. Otherwise text:
+Show progress overview. Read `.study-config.json` and use
+`references/workspace-lifecycle.md` to interpret `session_state`. If
+visual-explainer is available, generate an HTML dashboard. Otherwise text:
 
 ```
 Study: [topic] ([approach])
@@ -154,6 +176,7 @@ cd <skill-dir>/scripts/catalog && uv run study-catalog search "<query>"
 ### `study break`
 
 Save session state and exit cleanly:
+Read `references/workspace-lifecycle.md` first.
 1. Commit any uncommitted changes
 2. Update `.study-config.json`:
    - `session_state.phase` = current phase (NOT `idle` — that loses context)
@@ -207,7 +230,7 @@ Create your implementation in: `practice/lesson-NN/`
 3. **Feedback is specific.** Quote their code. Explain why something is wrong/good. Suggest approach, not exact fix.
 4. **Encourage experimentation.** Breaking things is learning. Git keeps everything safe.
 
-## User Interaction (AskUserQuestion)
+## User Interaction
 
 **After presenting a new lesson:**
 ```
@@ -246,7 +269,8 @@ When teaching concepts that benefit from visual representation, read `references
 - **Star charts** → Starplot (Python SVG generation)
 - **Music notation** → LilyPond (CLI SVG generation)
 
-Spawn the visual-explainer agent with the library choice in the prompt:
+If subagents or background tasks are available, ask visual-explainer with the
+library choice in the prompt:
 
 ```
 Agent(subagent_type="general-purpose", prompt="
@@ -307,11 +331,12 @@ If visual-explainer is unavailable, use ASCII diagrams in the lesson notes. Visu
 
 ## Git Conventions
 
-- `[claude]` — lesson notes, feedback, guidance written by Claude
-- `[user]` — user's implementation work
-- `[session]` — session start/end markers
+- `[agent]` - lesson notes, feedback, guidance written by the active agent
+- `[user]` - user's implementation work
+- `[session]` - session start/end markers
 
-Always commit before switching turns (Claude → user, user → Claude). This keeps the git history clean and makes `git diff HEAD` reliable for reviewing user work.
+Always commit before switching turns between the agent and user. This keeps the
+git history clean and makes `git diff HEAD` reliable for reviewing user work.
 
 ## Workspace Layout
 
@@ -347,5 +372,5 @@ Per-session modes that can change within an approach:
 
 - **tutorial** (default) — structured lessons with concepts + exercises
 - **practice** — work on exercises without new concepts
-- **exploration** — user-driven, Claude assists and answers questions
+- **exploration** — user-driven, the agent assists and answers questions
 - **review** — revisit previous lessons via FSRS, fill gaps
