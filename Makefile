@@ -36,4 +36,7 @@ build: ## Build the FSRS scheduler binary
 
 clean: ## Remove generated local artifacts
 	rm -rf scripts/catalog/.pytest_cache scripts/catalog/.ruff_cache scripts/catalog/.coverage
+	rm -f scripts/catalog/coverage.xml
 	rm -f scripts/fsrs/fsrs
+	rm -f scripts/fsrs/coverage.out
+	find scripts -type d -name __pycache__ -prune -exec rm -rf {} +

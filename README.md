@@ -57,10 +57,10 @@ These enhance the experience but aren't required:
 
 | Plugin/Skill | What it enables | Install |
 |---|---|---|
-| [SciAgent-Skills](https://github.com/jaechang-hits/SciAgent-Skills) | 199 curated bioinformatics & life science skills — domain-aware lessons, parameter tables, troubleshooting, exercise verification for scientific topics | `/plugin marketplace add jaechang-hits/SciAgent-Skills && /plugin install sciagent-skills` |
-| context7 | Live framework/library documentation in lessons | `/install context7@claude-plugins-official` |
-| Playwright | Browser preview for visual diagrams | `/install playwright@claude-plugins-official` |
-| [visual-explainer](https://github.com/nicobailon/visual-explainer) | Self-contained HTML diagrams and visualizations for lesson content | `/plugin marketplace add nicobailon/visual-explainer && /plugin install visual-explainer@visual-explainer-marketplace` |
+| [SciAgent-Skills](https://github.com/jaechang-hits/SciAgent-Skills) | Curated bioinformatics and life science skills — domain-aware lessons, parameter tables, troubleshooting, exercise verification for scientific topics | Install from that project's current agent-specific instructions |
+| context7 | Live framework/library documentation in lessons | Install through your agent's MCP/plugin mechanism |
+| Playwright | Browser preview for visual diagrams | Install through your agent's MCP/plugin mechanism |
+| [visual-explainer](https://github.com/nicobailon/visual-explainer) | Self-contained HTML diagrams and visualizations for lesson content | Install from that project's current agent-specific instructions |
 
 ### Optional
 
@@ -89,7 +89,7 @@ The skill adapts to what's available. Nothing crashes if a plugin is missing:
 | Feature | With plugin | Without plugin |
 |---|---|---|
 | Scientific domains | Curated workflows, parameter tables, troubleshooting via SciAgent-Skills | Falls through to web search |
-| Lesson research | Live docs via context7 | Claude's training knowledge |
+| Lesson research | Live docs via context7 | Model's built-in knowledge |
 | Source material | Semantic search via NotebookLM | Grep over extracted text, or skipped |
 | Concept diagrams | HTML via visual-explainer | ASCII diagrams in lesson notes |
 | Code validation | LSP real-time checking | User runs tests manually |
@@ -228,7 +228,7 @@ Backend priority:
 
 ## SciAgent-Skills Integration
 
-When the [SciAgent-Skills](https://github.com/jaechang-hits/SciAgent-Skills) plugin is installed (built by [Jaechang Hits](https://github.com/jaechang-hits)), the study skill becomes domain-aware for 199 scientific topics across bioinformatics, cheminformatics, biostatistics, proteomics, drug discovery, scientific computing, and more.
+When the [SciAgent-Skills](https://github.com/jaechang-hits/SciAgent-Skills) plugin is installed (built by [Jaechang Hits](https://github.com/jaechang-hits)), the study skill becomes domain-aware across bioinformatics, cheminformatics, biostatistics, proteomics, drug discovery, scientific computing, and more.
 
 **What it enables:**
 
@@ -238,7 +238,8 @@ When the [SciAgent-Skills](https://github.com/jaechang-hits/SciAgent-Skills) plu
 - **Exercise verification** — during review, the skill cross-references your implementation against sciagent's Common Recipes as a private structural check (never shown to you).
 - **Troubleshooting as hints** — when stuck, the skill checks the matched sciagent skill's troubleshooting table before spawning a research agent.
 
-**Install:**
+Install SciAgent-Skills from its current instructions. For Claude Code, the
+plugin commands are:
 
 ```bash
 /plugin marketplace add jaechang-hits/SciAgent-Skills

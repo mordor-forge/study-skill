@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gdetrane/study-skill/scripts/fsrs/internal"
+	"github.com/mordor-forge/study-skill/scripts/fsrs/internal"
 )
 
 const defaultStorePath = ".fsrs/cards.json"
