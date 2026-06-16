@@ -46,10 +46,11 @@ def validate(path: Path) -> None:
         msg = "SKILL.md frontmatter requires descriptive string field: description"
         raise ValueError(msg)
 
-    metadata: Any = data.get("metadata", {})
-    if metadata and not isinstance(metadata, dict):
-        msg = "SKILL.md metadata field must be a mapping when present"
-        raise ValueError(msg)
+    if "metadata" in data:
+        metadata: Any = data["metadata"]
+        if not isinstance(metadata, dict):
+            msg = "SKILL.md metadata field must be a mapping when present"
+            raise ValueError(msg)
 
 
 def main() -> int:

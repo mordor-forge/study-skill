@@ -204,12 +204,13 @@ uv run study-catalog build /path/to/your/books/ --output ~/.config/study/book-ca
 # → "Found 3 matching books in your library. Add as source?"
 ```
 
-For your current local library, the command is:
+For a local library, replace the source path with the directory that contains
+your books:
 
 ```bash
-cd ~/.agents/skills/study/scripts/catalog
+cd <installed-study-skill>/scripts/catalog
 uv sync
-uv run study-catalog build /mnt/truenas_nfs/books --output ~/.config/study/book-catalog.json
+uv run study-catalog build /path/to/your/books --output ~/.config/study/book-catalog.json
 ```
 
 ## Source Material

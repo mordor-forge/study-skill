@@ -17,6 +17,9 @@ def _tokenize(text: str) -> set[str]:
     }
 
 
+LANGUAGE_TOKENS = {"c", "r"}
+
+
 def score_book(book: Book, query: str) -> int:
     """Score a book against a search query.
 
@@ -24,6 +27,7 @@ def score_book(book: Book, query: str) -> int:
         - Exact title match (case-insensitive): +10
         - Topic match (query appears in any topic): +5 per matching topic
         - Word overlap (query words found in title): +3 per matching word
+        - Exact single-letter language token in title: +4 per token
         - Category match (query appears in category): +1
 
     Returns:
@@ -49,6 +53,9 @@ def score_book(book: Book, query: str) -> int:
     title_words = _tokenize(book.title)
     overlap = query_words & title_words
     score += 3 * len(overlap)
+
+    language_overlap = query_words & title_words & LANGUAGE_TOKENS
+    score += 4 * len(language_overlap)
 
     # Category match
     category_words = _tokenize(book.category)

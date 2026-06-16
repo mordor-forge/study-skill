@@ -2,5 +2,7 @@
   "include": ["scripts/catalog/src"],
   "typeCheckingMode": "strict",
   "pythonVersion": "3.11",
+  "venvPath": "scripts/catalog",
+  "venv": ".venv",
   "reportMissingTypeStubs": false
 }

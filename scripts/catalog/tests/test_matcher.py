@@ -133,3 +133,13 @@ class TestRankBooks:
         assert titles.index("Effective C Robert C Seacord") < titles.index(
             "Python Programming Fundamentals"
         )
+
+    def test_single_letter_language_token_breaks_generic_programming_tie(self):
+        books = [
+            _book("Python Programming", category="Programming", topics=["programming"]),
+            _book("Effective C", category="Programming", topics=["programming"]),
+        ]
+
+        results = rank_books(books, "C programming", top_n=2)
+
+        assert [result["title"] for result in results] == ["Effective C", "Python Programming"]

@@ -34,3 +34,21 @@ def test_frontmatter_returns_yaml_body() -> None:
 
     expected = "name: study\ndescription: valid portable skill metadata\n"
     assert validator._frontmatter(text) == expected
+
+
+@pytest.mark.parametrize("metadata", ["[]", "false", "''"])
+def test_validate_rejects_falsy_non_mapping_metadata(tmp_path: Path, metadata: str) -> None:
+    validator = _load_validator()
+    path = tmp_path / "SKILL.md"
+    path.write_text(
+        "---\n"
+        "name: study\n"
+        "description: Valid portable skill metadata with enough detail for clients.\n"
+        f"metadata: {metadata}\n"
+        "---\n"
+        "# Body\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="metadata field must be a mapping"):
+        validator.validate(path)
