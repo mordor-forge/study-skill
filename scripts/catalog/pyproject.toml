@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Book catalog builder for the study skill"
 requires-python = ">=3.11"
 dependencies = [
-    "pydantic>=2.0",
+    "pydantic>=2.13.4",
     "pdfplumber>=0.11",
 ]
 
