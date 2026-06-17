@@ -9,11 +9,11 @@ import (
 var DefaultParameters = Parameters{
 	W: [21]float64{
 		0.212, 1.2931, 2.3065, 8.2956, // w0-w3: initial stability per rating
-		6.4133, 0.8334, 3.0194, 0.001,  // w4-w7: difficulty params
-		1.8722, 0.1666, 0.796, 1.4835,  // w8-w11: stability update params
+		6.4133, 0.8334, 3.0194, 0.001, // w4-w7: difficulty params
+		1.8722, 0.1666, 0.796, 1.4835, // w8-w11: stability update params
 		0.0614, 0.2629, 1.6483, 0.6014, // w12-w15: stability update params
-		1.8729, 0.5425, 0.0912,         // w16-w18: easy bonus, same-day params
-		0.0658, 0.1542,                 // w19-w20: unused, decay exponent
+		1.8729, 0.5425, 0.0912, // w16-w18: easy bonus, same-day params
+		0.0658, 0.1542, // w19-w20: unused, decay exponent
 	},
 	DesiredRetention: 0.9,
 }

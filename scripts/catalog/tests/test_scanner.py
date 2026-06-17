@@ -4,7 +4,12 @@ from pathlib import Path
 
 import pytest
 
-from catalog.scanner import derive_topics, dirname_to_title, scan_directory
+from catalog.scanner import (
+    derive_topics,
+    detect_book_format,
+    dirname_to_title,
+    scan_directory,
+)
 
 
 class TestDirnameToTitle:
@@ -17,6 +22,9 @@ class TestDirnameToTitle:
     def test_mixed_separators(self):
         assert dirname_to_title("my_book-name") == "My Book Name"
 
+    def test_dots(self):
+        assert dirname_to_title("some.book.name") == "Some Book Name"
+
     def test_multiple_spaces_collapsed(self):
         assert dirname_to_title("too__many___underscores") == "Too Many Underscores"
 
@@ -25,6 +33,23 @@ class TestDirnameToTitle:
 
     def test_already_clean(self):
         assert dirname_to_title("Already Clean") == "Already Clean"
+
+
+class TestDetectBookFormat:
+    def test_supported_suffix(self, tmp_path):
+        path = tmp_path / "Book.EPUB"
+        path.write_bytes(b"fake book content")
+        assert detect_book_format(path) == "epub"
+
+    def test_pdf_signature_without_supported_suffix(self, tmp_path):
+        path = tmp_path / "10 - Unknown.1007%2f978-1-4614-6227-9"
+        path.write_bytes(b"%PDF-1.4 fake")
+        assert detect_book_format(path) == "pdf"
+
+    def test_unsupported_file(self, tmp_path):
+        path = tmp_path / "metadata.opf"
+        path.write_text("<package />")
+        assert detect_book_format(path) is None
 
 
 class TestDeriveTopics:
@@ -145,6 +170,27 @@ class TestScanDirectory:
         assert len(catalog.books) == 1
         assert catalog.books[0].format == "epub"
         assert catalog.books[0].filename == "novel.epub"
+
+    def test_uppercase_extensions_indexed(self, tmp_path):
+        _create_fake_pdf(tmp_path / "Physics" / "Classical.Mechanics.PDF")
+        _create_fake_book(tmp_path / "Fiction" / "Novel.EPUB")
+        catalog = scan_directory(tmp_path)
+        assert len(catalog.books) == 2
+
+        by_filename = {book.filename: book for book in catalog.books}
+        assert by_filename["Classical.Mechanics.PDF"].format == "pdf"
+        assert by_filename["Classical.Mechanics.PDF"].title == "Classical Mechanics"
+        assert by_filename["Novel.EPUB"].format == "epub"
+
+    def test_pdf_signature_without_supported_suffix_indexed(self, tmp_path):
+        book_path = tmp_path / "Unknown" / "10 (335)" / "10 - Unknown.1007%2f978-1-4614-6227-9"
+        _create_fake_pdf(book_path)
+        catalog = scan_directory(tmp_path)
+        assert len(catalog.books) == 1
+        assert catalog.books[0].format == "pdf"
+        assert catalog.books[0].filename == "10 - Unknown.1007%2f978-1-4614-6227-9"
+        assert "1007%2F978" in catalog.books[0].title
+        assert "4614" in catalog.books[0].title
 
     def test_mobi_indexed(self, tmp_path):
         _create_fake_book(tmp_path / "Fiction" / "novel.mobi")

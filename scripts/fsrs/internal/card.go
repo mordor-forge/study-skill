@@ -83,7 +83,7 @@ func NewCard(id, topic string, lessonNum int) Card {
 		Difficulty: 0,
 		Stability:  0,
 		Due:        now,
-		LastReview:  time.Time{},
+		LastReview: time.Time{},
 		Reviews:    0,
 		Lapses:     0,
 	}

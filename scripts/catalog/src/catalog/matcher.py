@@ -3,13 +3,21 @@
 from __future__ import annotations
 
 import re
+from typing import Any
 
 from catalog.models import Book
 
 
 def _tokenize(text: str) -> set[str]:
     """Split text into lowercase word tokens, stripping non-alphanumeric chars."""
-    return {w for w in re.findall(r"[a-z0-9]+", text.lower()) if len(w) > 1}
+    return {
+        word
+        for word in re.findall(r"[a-z0-9]+", text.lower())
+        if len(word) > 1 or word in {"c", "r"}
+    }
+
+
+LANGUAGE_TOKENS = {"c", "r"}
 
 
 def score_book(book: Book, query: str) -> int:
@@ -19,6 +27,7 @@ def score_book(book: Book, query: str) -> int:
         - Exact title match (case-insensitive): +10
         - Topic match (query appears in any topic): +5 per matching topic
         - Word overlap (query words found in title): +3 per matching word
+        - Exact single-letter language token in title: +4 per token
         - Category match (query appears in category): +1
 
     Returns:
@@ -27,7 +36,6 @@ def score_book(book: Book, query: str) -> int:
     score = 0
     query_lower = query.lower().strip()
     title_lower = book.title.lower()
-    category_lower = book.category.lower()
 
     # Exact title match
     if query_lower == title_lower:
@@ -46,8 +54,12 @@ def score_book(book: Book, query: str) -> int:
     overlap = query_words & title_words
     score += 3 * len(overlap)
 
+    language_overlap = query_words & title_words & LANGUAGE_TOKENS
+    score += 4 * len(language_overlap)
+
     # Category match
-    if query_lower in category_lower or any(w in category_lower for w in query_words):
+    category_words = _tokenize(book.category)
+    if query_words & category_words:
         score += 1
 
     return score
@@ -57,13 +69,13 @@ def rank_books(
     books: list[Book],
     query: str,
     top_n: int = 10,
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     """Score and rank books against a query.
 
     Returns top N results (excluding zero-score books) as dicts
     with the book data plus a 'score' field, sorted by descending score.
     """
-    scored = []
+    scored: list[dict[str, Any]] = []
     for book in books:
         s = score_book(book, query)
         if s > 0:

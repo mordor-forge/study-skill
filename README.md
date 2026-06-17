@@ -1,32 +1,53 @@
 # study
 
-A Claude Code skill for structured, interactive learning with spaced repetition.
+An Agent Skills-compatible study tutor for structured, interactive learning with spaced repetition.
 
-Claude teaches concepts through notes and guides you through exercises you implement yourself — with FSRS-based review scheduling, research agent integration, PDF source material support, and ADHD-aware session management.
+The active agent teaches concepts through notes and guides you through exercises you implement yourself, with FSRS-based review scheduling, optional research integrations, PDF source material support, and restart-safe session state.
 
 ## Quick Start
 
-1. Install the skill into your Claude Code skills directory:
+1. Install the full skill folder for your agent:
+
+   Claude Code:
    ```bash
-   cp -r study/ ~/.claude/skills/study/
+   mkdir -p ~/.claude/skills
+   cp -R study/ ~/.claude/skills/study/
+   ```
+
+   Codex:
+   ```bash
+   mkdir -p ~/.agents/skills
+   cp -R study/ ~/.agents/skills/study/
+   ```
+
+   Hermes:
+   ```bash
+   mkdir -p ~/.hermes/skills
+   cp -R study/ ~/.hermes/skills/study/
    ```
 
 2. Build the FSRS scheduler:
    ```bash
-   cd ~/.claude/skills/study/scripts/fsrs && go build -o fsrs ./cmd/fsrs/
+   cd <installed-study-skill>/scripts/fsrs
+   go build -o fsrs ./cmd/fsrs/
    ```
 
 3. Start learning:
-   ```
+   ```text
    /study init "Go concurrency"
    /study start
+   ```
+
+   In Codex, explicitly mention the skill if needed:
+   ```text
+   $study study init "Go concurrency"
    ```
 
 ## Prerequisites
 
 ### Required
 
-- **Claude Code** with Agent tool access
+- **An Agent Skills-compatible client** such as Claude Code, Codex, Hermes, Cline, or OpenCode
 - **Go 1.22+** — to build the FSRS spaced repetition binary
 - **Python 3.11+** and **uv** — for the book catalog builder (only needed if you use `study catalog`)
 
@@ -36,10 +57,10 @@ These enhance the experience but aren't required:
 
 | Plugin/Skill | What it enables | Install |
 |---|---|---|
-| [SciAgent-Skills](https://github.com/jaechang-hits/SciAgent-Skills) | 197 curated bioinformatics & life science skills — domain-aware lessons, parameter tables, troubleshooting, exercise verification for scientific topics | `/plugin marketplace add jaechang-hits/SciAgent-Skills && /plugin install sciagent-skills` |
-| context7 | Live framework/library documentation in lessons | `/install context7@claude-plugins-official` |
-| Playwright | Browser preview for visual diagrams | `/install playwright@claude-plugins-official` |
-| [visual-explainer](https://github.com/nicobailon/visual-explainer) | Self-contained HTML diagrams and visualizations for lesson content | Copy to `~/.claude/skills/visual-explainer/` |
+| [SciAgent-Skills](https://github.com/jaechang-hits/SciAgent-Skills) | Curated bioinformatics and life science skills — domain-aware lessons, parameter tables, troubleshooting, exercise verification for scientific topics | Install from that project's current agent-specific instructions |
+| context7 | Live framework/library documentation in lessons | Install through your agent's MCP/plugin mechanism |
+| Playwright | Browser preview for visual diagrams | Install through your agent's MCP/plugin mechanism |
+| [visual-explainer](https://github.com/nicobailon/visual-explainer) | Self-contained HTML diagrams and visualizations for lesson content | Install from that project's current agent-specific instructions |
 
 ### Optional
 
@@ -52,14 +73,12 @@ These enhance the experience but aren't required:
 
 #### NotebookLM MCP Setup
 
-NotebookLM is **free for any Google account** — no paid subscription, API key, or Google Cloud project required. The free tier (100 notebooks, 50 sources/notebook, 50 queries/day) is more than enough for studying.
+NotebookLM MCP works with free and paid Google accounts and does not require a Google Cloud project. It uses Google account authentication rather than an official public NotebookLM API.
 
-Built by [Jacob Ben-David](https://github.com/jacob-bd). To set up:
+Built by [Jacob Ben-David](https://github.com/jacob-bd). To set up the current unified CLI/MCP package:
 1. Install the MCP server: `uv tool install notebooklm-mcp-cli`
 2. Authenticate: `nlm login` (opens browser for one-time Google sign-in)
 3. Connect to Claude Code: `nlm setup add claude-code`
-
-Google Workspace accounts (business/education) get NotebookLM Plus automatically with higher limits.
 
 > **Note:** The NotebookLM MCP uses undocumented browser APIs (cookie-based auth), not an official Google API. It works reliably but could break if Google changes their internal endpoints. This is why the skill includes fallback strategies (local RAG, chunked text) for source material.
 
@@ -70,7 +89,7 @@ The skill adapts to what's available. Nothing crashes if a plugin is missing:
 | Feature | With plugin | Without plugin |
 |---|---|---|
 | Scientific domains | Curated workflows, parameter tables, troubleshooting via SciAgent-Skills | Falls through to web search |
-| Lesson research | Live docs via context7 | Claude's training knowledge |
+| Lesson research | Live docs via context7 | Model's built-in knowledge |
 | Source material | Semantic search via NotebookLM | Grep over extracted text, or skipped |
 | Concept diagrams | HTML via visual-explainer | ASCII diagrams in lesson notes |
 | Code validation | LSP real-time checking | User runs tests manually |
@@ -106,6 +125,54 @@ study break
     Save session state and exit cleanly.
 ```
 
+## Agent Support
+
+The skill is intentionally portable: `SKILL.md` contains the workflow, `references/`
+contains deeper protocols, `templates/` contains workspace scaffolds, and `scripts/`
+contains deterministic support tools.
+
+| Client | Install/use |
+|---|---|
+| Claude Code | Copy to `~/.claude/skills/study`; use `/study ...` if exposed as a command |
+| Codex CLI/IDE/App | Copy to `.agents/skills/study` or `~/.agents/skills/study`; invoke with `$study` or rely on implicit skill matching |
+| Hermes Agent | Copy to `~/.hermes/skills/study`; run from the study workspace and resume via Hermes session flags plus `.study-config.json` |
+| Cline | Copy to `.cline/skills/study` or `~/.cline/skills/study` |
+| OpenCode | Use built-in Agent Skills support when available; older setups may use `opencode-agent-skills` |
+
+For details, read `references/agent-adapters.md`.
+
+## Stop And Resume
+
+Stop/resume is workspace-driven, not agent-memory-driven. The authoritative state
+lives in `.study-config.json`, `lessons/`, `practice/`, `notes/`, and
+`.fsrs/cards.json`. Any agent can resume a workspace by reading
+`references/workspace-lifecycle.md`, then following `session_state.phase`,
+`pending_action`, and `context`.
+
+This is especially important for Hermes and other agents with their own memory or
+session resume systems: those systems help recover chat context, but the study
+workspace remains the source of truth.
+
+## Usage
+
+Use the skill after installation:
+
+```text
+/study init "Quantum Mechanics"
+/study start
+/study status
+/study review
+```
+
+For catalog-backed source discovery:
+
+```bash
+cd <installed-study-skill>/scripts/catalog
+uv sync
+uv run study-catalog build /path/to/books --output ~/.config/study/book-catalog.json
+uv run study-catalog search "quantum mechanics"
+```
+
 ## Learning Approaches
 
 Choose at init:
@@ -116,17 +183,34 @@ Choose at init:
 
 ## Book Catalog
 
-If you have a collection of PDF books (textbooks, Springer open access, etc.):
+If you have a collection of PDF books or ebooks, build the catalog before
+`study init` if you want automatic book suggestions. The skill looks for the
+default catalog at:
+
+```text
+~/.config/study/book-catalog.json
+```
+
+Build it once, then rebuild whenever your library changes:
 
 ```bash
 # Build the catalog (one-time)
-cd ~/.claude/skills/study/scripts/catalog
+cd <installed-study-skill>/scripts/catalog
 uv sync
-uv run study-catalog build /path/to/your/books/
+uv run study-catalog build /path/to/your/books/ --output ~/.config/study/book-catalog.json
 
 # The skill auto-suggests relevant books when you init a workspace
 /study init "Quantum Mechanics"
 # → "Found 3 matching books in your library. Add as source?"
+```
+
+For a local library, replace the source path with the directory that contains
+your books:
+
+```bash
+cd <installed-study-skill>/scripts/catalog
+uv sync
+uv run study-catalog build /path/to/your/books --output ~/.config/study/book-catalog.json
 ```
 
 ## Source Material
@@ -144,7 +228,7 @@ Backend priority:
 
 ## SciAgent-Skills Integration
 
-When the [SciAgent-Skills](https://github.com/jaechang-hits/SciAgent-Skills) plugin is installed (built by [Jaechang Hits](https://github.com/jaechang-hits)), the study skill becomes domain-aware for 197 scientific topics across bioinformatics, cheminformatics, biostatistics, proteomics, drug discovery, scientific computing, and more.
+When the [SciAgent-Skills](https://github.com/jaechang-hits/SciAgent-Skills) plugin is installed (built by [Jaechang Hits](https://github.com/jaechang-hits)), the study skill becomes domain-aware across bioinformatics, cheminformatics, biostatistics, proteomics, drug discovery, scientific computing, and more.
 
 **What it enables:**
 
@@ -154,7 +238,8 @@ When the [SciAgent-Skills](https://github.com/jaechang-hits/SciAgent-Skills) plu
 - **Exercise verification** — during review, the skill cross-references your implementation against sciagent's Common Recipes as a private structural check (never shown to you).
 - **Troubleshooting as hints** — when stuck, the skill checks the matched sciagent skill's troubleshooting table before spawning a research agent.
 
-**Install:**
+Install SciAgent-Skills from its current instructions. For Claude Code, the
+plugin commands are:
 
 ```bash
 /plugin marketplace add jaechang-hits/SciAgent-Skills
@@ -227,6 +312,30 @@ study/
 └── scripts/
     ├── fsrs/                   # Go — FSRS-6 scheduler
     └── catalog/                # Python — book catalog builder
+```
+
+## Development
+
+Run checks from the repository root:
+
+```bash
+make setup
+make test
+make lint
+make typecheck
+make coverage
+```
+
+The Python catalog is a nested uv project with its lockfile at
+`scripts/catalog/uv.lock`. The Go FSRS scheduler is a nested Go module at
+`scripts/fsrs`.
+
+The deterministic lifecycle smoke test creates a temporary study workspace,
+writes a lesson, adds an FSRS card, records a break state, and verifies another
+agent could resume from `.study-config.json`:
+
+```bash
+scripts/e2e/study-lifecycle-smoke.sh
 ```
 
 ## License

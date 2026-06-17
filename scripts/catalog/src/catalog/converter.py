@@ -11,6 +11,7 @@ import hashlib
 import shutil
 import subprocess
 from pathlib import Path
+from typing import Any
 
 # Formats that NLM and most RAG backends accept natively
 NATIVE_FORMATS = {".pdf"}
@@ -148,7 +149,7 @@ def convert_to_pdf(
     return output
 
 
-def get_converter_info() -> dict:
+def get_converter_info() -> dict[str, Any]:
     """Return information about the available converter.
 
     Useful for the skill to report in status output.
