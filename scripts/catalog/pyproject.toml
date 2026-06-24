@@ -37,6 +37,6 @@ dev = [
     "pyright>=1.1.407",
     "pyyaml>=6.0",
     "pytest-cov>=7.0",
-    "pytest>=8.0",
+    "pytest>=9.1.1",
     "ruff>=0.8",
 ]
