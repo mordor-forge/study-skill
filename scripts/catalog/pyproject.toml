@@ -34,7 +34,7 @@ show_missing = true
 
 [dependency-groups]
 dev = [
-    "pyright>=1.1.407",
+    "pyright>=1.1.411",
     "pyyaml>=6.0",
     "pytest-cov>=7.0",
     "pytest>=8.0",
