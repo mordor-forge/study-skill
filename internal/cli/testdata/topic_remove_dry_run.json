@@ -3,7 +3,7 @@
   "data": {
     "topic": "linear-algebra",
     "moved_to": "$STUDY_HOME/.lamplight/removed/20261001-093000-linear-algebra",
-    "restore": "mv $STUDY_HOME/.lamplight/removed/20261001-093000-linear-algebra $STUDY_HOME/linear-algebra",
+    "restore": "test ! -e '$STUDY_HOME/linear-algebra' && mv '$STUDY_HOME/.lamplight/removed/20261001-093000-linear-algebra' '$STUDY_HOME/linear-algebra'",
     "dry_run": true
   }
 }

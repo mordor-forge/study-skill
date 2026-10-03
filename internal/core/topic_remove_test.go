@@ -70,7 +70,8 @@ func TestRemoveTopicMovesItOutOfTheStudyHome(t *testing.T) {
 	}
 
 	// The restore command, run as given, brings the Topic back under its id.
-	if want := "mv " + got.MovedTo + " " + filepath.Join(home, "rust"); got.Restore != want {
+	back := shellWord(filepath.Join(home, "rust"))
+	if want := "test ! -e " + back + " && mv " + shellWord(got.MovedTo) + " " + back; got.Restore != want {
 		t.Errorf("restore = %q, want %q", got.Restore, want)
 	}
 	if out, err := exec.Command("sh", "-c", got.Restore).CombinedOutput(); err != nil {
@@ -82,6 +83,42 @@ func TestRemoveTopicMovesItOutOfTheStudyHome(t *testing.T) {
 	}
 	if len(status.Topics) != 1 || status.Topics[0].Goal != "Write a CLI" || len(status.Topics[0].Flags) != 0 {
 		t.Fatalf("status after moving it back = %+v", status.Topics)
+	}
+}
+
+// Once another Topic has the id, the restore command refuses: it never moves
+// the removed Topic inside the Topic that took its place.
+func TestRestoreCommandRefusesATakenID(t *testing.T) {
+	ctx := context.Background()
+	gitIdentity(t)
+	home := t.TempDir()
+	m := newMachine(t, home, "id", t0)
+	if _, err := m.CreateTopic(ctx, TopicSpec{Title: "Rust", Goal: "Write a CLI"}); err != nil {
+		t.Fatal(err)
+	}
+	removed, err := m.RemoveTopic(ctx, "rust", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := m.CreateTopic(ctx, TopicSpec{Title: "Rust", Goal: "Write a web server"}); err != nil {
+		t.Fatal(err)
+	}
+
+	if out, err := exec.Command("sh", "-c", removed.Restore).CombinedOutput(); err == nil {
+		t.Errorf("%s succeeded although another Topic is named rust\n%s", removed.Restore, out)
+	}
+	if !exists(filepath.Join(removed.MovedTo, "topic.toml")) {
+		t.Errorf("the removed Topic left %s", removed.MovedTo)
+	}
+	if nested := filepath.Join(home, "rust", filepath.Base(removed.MovedTo)); exists(nested) {
+		t.Errorf("the removed Topic was moved inside the new one, to %s", nested)
+	}
+	status, err := m.Status(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(status.Topics) != 1 || status.Topics[0].Goal != "Write a web server" || len(status.Topics[0].Flags) != 0 {
+		t.Fatalf("status after the refused restore = %+v", status.Topics)
 	}
 }
 

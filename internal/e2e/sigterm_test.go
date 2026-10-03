@@ -25,9 +25,10 @@ func TestSIGTERMStopsACheck(t *testing.T) {
 		t.Skip("builds the study binary")
 	}
 	ctx := context.Background()
-	// Built before HOME moves, so the build uses the usual module cache.
+	// Built before HOME moves, so the build uses the usual module cache, and
+	// without a version stamp (see buildStudy).
 	bin := filepath.Join(t.TempDir(), "study")
-	if out, err := exec.Command("go", "build", "-o", bin, "github.com/mordor-forge/lamplight/v2/cmd/study").CombinedOutput(); err != nil {
+	if out, err := exec.Command("go", "build", "-buildvcs=false", "-o", bin, "github.com/mordor-forge/lamplight/v2/cmd/study").CombinedOutput(); err != nil {
 		t.Fatalf("building study: %v\n%s", err, out)
 	}
 	withGitIdentity(t)

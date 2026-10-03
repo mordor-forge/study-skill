@@ -50,6 +50,36 @@ func TestTakeCommitsFirstCheckpointThenSkipsWhenUnchanged(t *testing.T) {
 	}
 }
 
+// Told which folder the caller opened, Take commits in that folder only: not
+// in one that has its name by the time the Checkpoint starts.
+func TestTakeCommitsOnlyInTheFolderItWasAskedFor(t *testing.T) {
+	ctx := context.Background()
+	dir := newRepo(t)
+	write(t, dir, "lessons/intro.md", "# Intro\n")
+	other, err := os.Stat(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, dryRun := range []bool{true, false} {
+		res, err := checkpoint.Take(ctx, dir, checkpoint.Options{Role: checkpoint.Learner, Time: when, Folder: other, DryRun: dryRun})
+		if !errors.Is(err, checkpoint.ErrRepositoryChanged) {
+			t.Fatalf("Take for another folder (dry run %v) = %+v, %v; want ErrRepositoryChanged", dryRun, res, err)
+		}
+	}
+	if out := gitMayFail(dir, "rev-parse", "--verify", "-q", "HEAD"); out != "" {
+		t.Fatalf("the refused Checkpoint committed %s", out)
+	}
+
+	asked, err := os.Stat(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res, err := checkpoint.Take(ctx, dir, checkpoint.Options{Role: checkpoint.Learner, Time: when, Folder: asked})
+	if err != nil || !res.Committed {
+		t.Fatalf("Take for the folder itself = %+v, %v; want a commit", res, err)
+	}
+}
+
 func TestTakeDryRunWritesNothingToGit(t *testing.T) {
 	dir := newRepo(t)
 	write(t, dir, "notes.md", "first")

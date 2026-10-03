@@ -60,6 +60,7 @@ package checkpoint
 
 import (
 	"errors"
+	"io/fs"
 	"time"
 )
 
@@ -128,6 +129,11 @@ type Options struct {
 	// lock. It reads the learner's index as it is, so it does not wait for
 	// an editor that holds the lock.
 	DryRun bool
+	// Folder, when set, is the Topic folder as the caller opened it. Take
+	// fails with ErrRepositoryChanged when dir no longer names that folder,
+	// so a Checkpoint never commits in a folder put in the Topic's place
+	// after the caller checked it.
+	Folder fs.FileInfo
 }
 
 // Result describes a Checkpoint.

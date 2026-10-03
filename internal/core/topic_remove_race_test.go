@@ -2,11 +2,13 @@ package core
 
 import (
 	"context"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync/atomic"
 	"testing"
+	"time"
 )
 
 // atPoint runs do once, the first time a write reaches point, then lets the
@@ -219,4 +221,87 @@ func hasIntentIn(t *testing.T, home, topicID string) bool {
 	}
 	defer root.Close()
 	return hasIntent(root, topicID)
+}
+
+// A Check runs for as long as its commands do. When the Topic is removed
+// meanwhile and another takes its id, the Attempt is recorded in neither: it
+// judged work in a Topic that is no longer the one named.
+func TestACheckThatOutlivesItsTopicRecordsNothing(t *testing.T) {
+	ctx := context.Background()
+	m := learningTopic(t)
+	var removed TopicRemoval
+	swap := func(CheckProgress) {
+		if removed.MovedTo != "" {
+			return
+		}
+		var err error
+		if removed, err = m.RemoveTopic(ctx, "c", false); err != nil {
+			t.Errorf("RemoveTopic: %v", err)
+			return
+		}
+		// The same Topic, started again from a copy: another folder.
+		if err := os.CopyFS(filepath.Join(m.home, "c"), os.DirFS(removed.MovedTo)); err != nil {
+			t.Error(err)
+		}
+	}
+	a, err := m.RunCheck(ctx, "c", "answer", CheckOptions{Progress: swap})
+	if CodeOf(err) != CodeNotFound || !strings.Contains(err.Error(), "removed or replaced") {
+		t.Errorf("RunCheck = %+v, %v; want not_found", a, err)
+	}
+	for _, dir := range []string{filepath.Join(m.home, "c"), removed.MovedTo} {
+		history, err := os.ReadFile(filepath.Join(dir, historyFile))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(string(history), eventAttemptRecorded) {
+			t.Errorf("an Attempt was recorded in %s", dir)
+		}
+	}
+}
+
+// A Checkpoint commits in the folder it checked under the lock, or nowhere.
+// A program that ignores the Topic's lock can still move that folder away
+// and put another in its place before the commit: it must not get the
+// commit.
+func TestACheckpointNeverCommitsInAFolderPutInTheTopicsPlace(t *testing.T) {
+	ctx := context.Background()
+	r := newRemovalRace(t)
+	moved := filepath.Join(t.TempDir(), "rust")
+	// The Checkpoint reads the clock once it holds the lock and has checked
+	// the folder, just before it commits.
+	swap := func() {
+		if err := os.Rename(filepath.Join(r.home, "rust"), moved); err != nil {
+			t.Error(err)
+		}
+		if err := os.CopyFS(filepath.Join(r.home, "rust"), os.DirFS(moved)); err != nil {
+			t.Error(err)
+		}
+	}
+	c, err := Open(Options{
+		Getenv: func(key string) string { return map[string]string{"STUDY_HOME": r.home, "HOME": r.home}[key] },
+		Dir:    r.home,
+		Now: func() time.Time {
+			if swap != nil {
+				do := swap
+				swap = nil
+				do()
+			}
+			return t0
+		},
+		NewID:  func() string { return "c001" },
+		Logger: slog.New(slog.DiscardHandler),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	res, err := c.Checkpoint(ctx, CheckpointSpec{Topic: "rust", Role: "learner"})
+	if CodeOf(err) != CodeNotFound || !strings.Contains(err.Error(), "removed or replaced") {
+		t.Errorf("Checkpoint = %+v, %v; want not_found", res, err)
+	}
+	for _, dir := range []string{filepath.Join(r.home, "rust"), moved} {
+		if raceWriters[1].wrote(t, dir) {
+			t.Errorf("the Checkpoint committed in %s", dir)
+		}
+	}
 }

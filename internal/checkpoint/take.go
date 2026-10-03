@@ -43,6 +43,10 @@ func Take(ctx context.Context, dir string, opts Options) (Result, error) {
 		return Result{}, err
 	}
 	defer r.close()
+	// From here on the pinned folder is the one checked before every write.
+	if opts.Folder != nil && !os.SameFile(opts.Folder, r.dirInfo) {
+		return Result{}, fmt.Errorf("%w: %s is no longer the folder the Checkpoint was asked for", ErrRepositoryChanged, r.dir)
+	}
 	identity, err := r.identity(ctx, when)
 	if err != nil {
 		return Result{}, err

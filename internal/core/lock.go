@@ -22,10 +22,10 @@ func lockTopic(ctx context.Context, home *os.Root, topicID string) (unlock func(
 }
 
 // lockOpenedTopic takes the lock of a Topic whose folder the caller opened
-// before waiting, then checks that the folder is still the Topic: one
-// removed (study topic remove) or replaced while the caller waited would
-// otherwise receive a write meant for the Topic. On any error the lock is
-// not held.
+// earlier, then checks that the folder is still the Topic: one removed
+// (study topic remove) or replaced since, while the caller waited for the
+// lock or did its work, would otherwise receive a write meant for the
+// Topic. On any error the lock is not held.
 func (c *Core) lockOpenedTopic(ctx context.Context, home, topic *os.Root, topicID string) (unlock func(), err error) {
 	if err := c.crashAt(crashBeforeLock); err != nil {
 		return nil, err
@@ -55,8 +55,8 @@ func stillTheTopic(home, topic *os.Root, topicID string) error {
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return internalError("reading Topic "+topicID, err)
 	}
-	return &Error{Code: CodeNotFound, Message: "Topic " + topicID + " was removed or replaced while this change waited " +
-		"for another one to finish, so nothing was written: run study status to see your Topics"}
+	return &Error{Code: CodeNotFound, Message: "Topic " + topicID + " was removed or replaced while this change was " +
+		"under way, so nothing was written: run study status to see your Topics"}
 }
 
 // importLock serialises imports: two of the same v1 workspace must not both
@@ -106,9 +106,34 @@ func lockFile(ctx context.Context, home *os.Root, rel, what, doing string) (unlo
 
 func lockPath(topicID string) string { return filepath.Join(localDir, "locks", topicID+".lock") }
 
-// lockHeld reports whether a writer holds the Topic's lock right now, so
-// status can tell a write in progress from an interrupted one. It never
-// creates the lock file and never waits.
+// wasInterrupted reports whether a write to the Topic was interrupted: its
+// marker is there and no writer is at work. The marker is read while the
+// Topic's lock is held, taken only if it is free: read one after the other,
+// a marker and a free lock are also what a write that finished in between
+// leaves, and status would flag a healthy write. It never creates the lock
+// file and never waits.
+func wasInterrupted(home *os.Root, topicID string) bool {
+	f, err := home.OpenFile(lockPath(topicID), os.O_RDWR, 0)
+	if err != nil {
+		// No lock file, so no writer.
+		return hasIntent(home, topicID)
+	}
+	defer f.Close()
+	locked, err := tryLock(f)
+	if err != nil {
+		return hasIntent(home, topicID)
+	}
+	if !locked {
+		// A writer is at work: its marker is a write in progress.
+		return false
+	}
+	interrupted := hasIntent(home, topicID)
+	_ = unlockFile(f)
+	return interrupted
+}
+
+// lockHeld reports whether a writer holds the Topic's lock right now. It
+// never creates the lock file and never waits.
 func lockHeld(home *os.Root, topicID string) bool {
 	f, err := home.OpenFile(lockPath(topicID), os.O_RDWR, 0)
 	if err != nil {

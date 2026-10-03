@@ -760,7 +760,7 @@ func (c *Core) loadTopic(home *os.Root, id string) (Topic, error) {
 	}
 	// A marker while the lock is held is a write in progress, not an
 	// interrupted one.
-	if hasIntent(home, id) && !lockHeld(home, id) {
+	if wasInterrupted(home, id) {
 		topic.Flags = append(topic.Flags, newFlag(FlagInterruptedWrite, "", nil, "",
 			"a write to this Topic was interrupted; the next change to it finishes the write"))
 	}

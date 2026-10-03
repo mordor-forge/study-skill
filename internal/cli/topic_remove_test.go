@@ -25,7 +25,8 @@ func TestTopicRemoveAdviceRestoresTheTopic(t *testing.T) {
 	}
 	var advice string
 	for _, line := range strings.Split(stdout.String(), "\n") {
-		if strings.HasPrefix(line, "  mv ") {
+		// The command is the one indented line.
+		if strings.HasPrefix(line, "  ") {
 			advice = strings.TrimSpace(line)
 		}
 	}

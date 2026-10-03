@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -59,11 +60,24 @@ type LargeFile struct {
 // A Checkpoint of the role the History says is owed, after a turn switch or
 // a completion, settles it: a checkpoint.taken Event records that.
 func (c *Core) Checkpoint(ctx context.Context, spec CheckpointSpec) (CheckpointResult, error) {
-	out, err := c.takeCheckpoint(ctx, spec)
+	role, message, err := checkpointRoleAndMessage(spec)
+	if err != nil {
+		return CheckpointResult{}, err
+	}
+	// One opened folder serves the commit and its record in the History:
+	// were the Topic replaced between the two, another Topic's History would
+	// record a commit it does not have.
+	home, topic, err := c.openTopicFolder(spec.Topic)
+	if err != nil {
+		return CheckpointResult{}, err
+	}
+	defer home.Close()
+	defer topic.Close()
+	out, err := c.takeCheckpoint(ctx, home, topic, spec, role, message)
 	if err != nil || spec.DryRun {
 		return out, err
 	}
-	_, err = c.writeTopic(ctx, spec.Topic, func(s *replayed, _ *topicView) (*change, error) {
+	_, err = c.writeOpenedTopic(ctx, home, topic, spec.Topic, func(s *replayed, _ *topicView) (*change, error) {
 		owed := s.study.owed
 		if owed == nil || owed.role != spec.Role {
 			return nil, nil
@@ -102,24 +116,23 @@ func replayCheckpointTaken(s *replayed, ev event) error {
 	return nil
 }
 
-func (c *Core) takeCheckpoint(ctx context.Context, spec CheckpointSpec) (CheckpointResult, error) {
+// checkpointRoleAndMessage checks whose Checkpoint a spec asks for, and its
+// message.
+func checkpointRoleAndMessage(spec CheckpointSpec) (checkpoint.Role, string, error) {
 	role := checkpoint.Role(spec.Role)
 	switch {
 	case role == "":
-		return CheckpointResult{}, invalidf("say whose turn ended: pass the role \"agent\" or \"learner\"")
+		return "", "", invalidf("say whose turn ended: pass the role \"agent\" or \"learner\"")
 	case role != checkpoint.Agent && role != checkpoint.Learner:
-		return CheckpointResult{}, invalidf("the role must be \"agent\" or \"learner\", not %q", spec.Role)
+		return "", "", invalidf("the role must be \"agent\" or \"learner\", not %q", spec.Role)
 	}
 	message, err := cleanText("message", spec.Message, maxCheckpointMessageRunes)
-	if err != nil {
-		return CheckpointResult{}, err
-	}
-	home, topic, err := c.openTopicFolder(spec.Topic)
-	if err != nil {
-		return CheckpointResult{}, err
-	}
-	defer home.Close()
-	defer topic.Close()
+	return role, message, err
+}
+
+// takeCheckpoint commits the work in the Topic folder the caller opened.
+func (c *Core) takeCheckpoint(ctx context.Context, home, topic *os.Root, spec CheckpointSpec, role checkpoint.Role,
+	message string) (CheckpointResult, error) {
 	if spec.DryRun {
 		// A dry run writes nothing, so it cannot finish an interrupted
 		// write, and what it would commit is not yet known.
@@ -140,10 +153,22 @@ func (c *Core) takeCheckpoint(ctx context.Context, spec CheckpointSpec) (Checkpo
 			return CheckpointResult{}, err
 		}
 	}
+	// git works on the folder by its path. The lock keeps study from moving
+	// it, but not other programs: the Checkpoint is told which folder was
+	// opened, and commits in no other.
+	folder, err := topic.Stat(".")
+	if err != nil {
+		return CheckpointResult{}, internalError("reading Topic "+spec.Topic, err)
+	}
 	path := filepath.Join(c.home, spec.Topic)
 	res, err := checkpoint.Take(ctx, path, checkpoint.Options{
-		Role: role, Message: message, Time: c.now(), DryRun: spec.DryRun,
+		Role: role, Message: message, Time: c.now(), DryRun: spec.DryRun, Folder: folder,
 	})
+	if errors.Is(err, checkpoint.ErrRepositoryChanged) {
+		if gone := stillTheTopic(home, topic, spec.Topic); gone != nil {
+			return CheckpointResult{}, gone
+		}
+	}
 	if err != nil {
 		return CheckpointResult{}, checkpointError(spec.Topic, path, err)
 	}

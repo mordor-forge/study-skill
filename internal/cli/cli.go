@@ -14,7 +14,9 @@ import (
 	"os"
 	"regexp"
 	"runtime/debug"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/colorprofile"
 	"github.com/charmbracelet/fang"
@@ -370,6 +372,8 @@ func (a *app) rootCommand() *cobra.Command {
 // manCommand prints study's man page in roff, for packages to install as
 // study.1. It replaces fang's own, which writes to the process's stdout
 // rather than the command's. The page is roff, so --json is a usage error.
+// Its date is the build's (see manDate), so a package built twice from one
+// commit holds the same page.
 func (a *app) manCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:                   "man",
@@ -381,14 +385,48 @@ func (a *app) manCommand() *cobra.Command {
 			if a.json {
 				return a.fail(usageError{errors.New("study man prints the man page in roff, never JSON: run it without --json")})
 			}
+			date, err := a.manDate()
+			if err != nil {
+				return a.fail(err)
+			}
 			page, err := mango.NewManPage(1, cmd.Root())
 			if err != nil {
 				return err
 			}
-			_, err = fmt.Fprint(cmd.OutOrStdout(), page.Build(roff.NewDocument()))
+			_, err = fmt.Fprint(cmd.OutOrStdout(), page.Build(datedPage{roff.NewDocument(), date}))
 			return err
 		},
 	}
+}
+
+// manDate is the date the man page carries: the one SOURCE_DATE_EPOCH
+// names, in seconds since 1970, which packagers set to the time of the
+// source so that builds are reproducible, or else today's. Both in UTC.
+func (a *app) manDate() (time.Time, error) {
+	if v := a.opts.Getenv("SOURCE_DATE_EPOCH"); v != "" {
+		sec, err := strconv.ParseInt(v, 10, 64)
+		if err != nil || sec < 0 {
+			return time.Time{}, usageError{fmt.Errorf("SOURCE_DATE_EPOCH is %q, not a time in seconds since 1970: "+
+				"unset it, or set it to the time of the source, such as git log -1 --format=%%ct", v)}
+		}
+		return time.Unix(sec, 0).UTC(), nil
+	}
+	now := time.Now
+	if a.opts.Now != nil {
+		now = a.opts.Now
+	}
+	return now().UTC(), nil
+}
+
+// datedPage is a roff document whose heading carries date: mango passes the
+// time the page is built.
+type datedPage struct {
+	*roff.Document
+	date time.Time
+}
+
+func (p datedPage) Heading(section uint, title, description string, _ time.Time) {
+	p.Document.Heading(section, title, description, p.date)
 }
 
 func (a *app) checkpointCommand() *cobra.Command {

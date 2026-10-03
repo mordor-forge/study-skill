@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -22,10 +23,34 @@ import (
 )
 
 // TestMain keeps results independent of the machine: completion scripts that
-// packages installed here must not show up in doctor or install results.
+// packages installed here must not show up in doctor or install results, and
+// the caller's GIT_* variables are cleared. A commit hook that runs the tests
+// sets GIT_INDEX_FILE, and GIT_DIR from a linked worktree: the git and go
+// commands the tests run themselves would then work on the repository being
+// committed. The core drops these variables on its own.
 func TestMain(m *testing.M) {
 	*cli.SystemCompletionRoots = []string{filepath.Join(os.TempDir(), "study-test-no-package-completions")}
+	for _, kv := range os.Environ() {
+		if name, _, _ := strings.Cut(kv, "="); strings.HasPrefix(name, "GIT_") {
+			os.Unsetenv(name)
+		}
+	}
 	os.Exit(m.Run())
+}
+
+// The import test, which builds a v1 workspace with plain git, runs the same
+// under a caller's git environment and writes nothing through it.
+func TestTheTestsIgnoreTheCallersGitEnvironment(t *testing.T) {
+	stray := t.TempDir()
+	cmd := exec.Command(os.Args[0], "-test.run=^TestImportCommand$", "-test.count=1")
+	cmd.Env = append(os.Environ(), "GIT_DIR="+filepath.Join(stray, "repo.git"),
+		"GIT_WORK_TREE="+filepath.Join(stray, "tree"), "GIT_INDEX_FILE="+filepath.Join(stray, "index"))
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Errorf("TestImportCommand under a caller's git environment: %v\n%s", err, out)
+	}
+	if left, _ := os.ReadDir(stray); len(left) != 0 {
+		t.Errorf("git wrote where the caller's environment pointed: %v", left)
+	}
 }
 
 // runEnv runs study with exactly the environment in env, started in dir, and

@@ -27,6 +27,24 @@ func TestManWritesToItsOutput(t *testing.T) {
 	}
 }
 
+// The man page carries the date SOURCE_DATE_EPOCH names, as packagers set it,
+// so a package built twice from one commit holds the same page; without it,
+// the day the page is printed.
+func TestManDatesThePageFromTheBuild(t *testing.T) {
+	home := t.TempDir()
+	r := runEnv(t, map[string]string{"HOME": home, "SOURCE_DATE_EPOCH": "86400"}, home, nil, "man")
+	if r.code != cli.ExitOK || !strings.HasPrefix(r.stdout, `.TH STUDY 1 "1970-01-02" `) {
+		t.Errorf("study man with SOURCE_DATE_EPOCH=86400: exit %d, stdout %.60q, stderr %q", r.code, r.stdout, r.stderr)
+	}
+	if r := run(t, home, "man"); !strings.HasPrefix(r.stdout, `.TH STUDY 1 "2026-10-01" `) {
+		t.Errorf("study man on %s: stdout %.60q", fixedNow.Format("2006-01-02"), r.stdout)
+	}
+	r = runEnv(t, map[string]string{"HOME": home, "SOURCE_DATE_EPOCH": "yesterday"}, home, nil, "man")
+	if r.code != cli.ExitUsage || !strings.Contains(r.stderr, "SOURCE_DATE_EPOCH") || strings.Contains(r.stdout, ".TH ") {
+		t.Errorf("study man with a SOURCE_DATE_EPOCH that is no time: exit %d, stdout %.60q, stderr %q", r.code, r.stdout, r.stderr)
+	}
+}
+
 // TestDocsDescribeEveryCommand keeps docs/cli.md, the contract scripts and
 // agents rely on, in step with the command tree: every visible command and
 // every visible flag of it must be documented.

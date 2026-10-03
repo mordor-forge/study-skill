@@ -16,14 +16,16 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// buildStudy builds the study binary for tests that run it on a terminal.
+// buildStudy builds the study binary for tests that run it on a terminal,
+// without a version stamp: the build must not need git to report on the
+// checkout, which it refuses to in one owned by another user.
 func buildStudy(t *testing.T) string {
 	t.Helper()
 	if testing.Short() {
 		t.Skip("builds the study binary")
 	}
 	bin := filepath.Join(t.TempDir(), "study")
-	if out, err := exec.CommandContext(t.Context(), "go", "build", "-o", bin, "github.com/mordor-forge/lamplight/v2/cmd/study").CombinedOutput(); err != nil {
+	if out, err := exec.CommandContext(t.Context(), "go", "build", "-buildvcs=false", "-o", bin, "github.com/mordor-forge/lamplight/v2/cmd/study").CombinedOutput(); err != nil {
 		t.Fatalf("building study: %v\n%s", err, out)
 	}
 	return bin

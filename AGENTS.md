@@ -83,6 +83,11 @@ GOOS=darwin go vet ./...            # macOS is supported too
   its folder. A test that writes a `.gitconfig` also points `GIT_CONFIG_GLOBAL` at it and
   sets `GIT_CONFIG_NOSYSTEM=1`, so git run by the test reads that file whatever the
   caller's environment says (the core strips `GIT_*` on its own).
+- A package whose tests run git or the go command themselves clears the caller's `GIT_*`
+  variables in `TestMain`: a commit hook that runs the tests sets `GIT_INDEX_FILE` and
+  `GIT_DIR`, which point those commands at the repository being committed.
+  `TestTheTestsIgnoreTheCallersGitEnvironment` checks it in each such package. Tests that
+  build `study` pass `-buildvcs=false`, so the build never needs git to report on the checkout.
 - Tests must pass with no git identity configured (CI has none), and in any order.
 
 ## Important Paths

@@ -110,6 +110,16 @@ func (c *Core) writeTopic(ctx context.Context, topicID string, p plan, dryRun bo
 	}
 	defer home.Close()
 	defer topic.Close()
+	return c.writeOpenedTopic(ctx, home, topic, topicID, p, dryRun)
+}
+
+// writeOpenedTopic is writeTopic for an operation that opened the Topic's
+// folder itself, read it, and worked for a while before writing: a Check
+// runs for as long as its commands do. Step 1 then checks the folder the
+// operation read, so a Topic removed or replaced during that work receives
+// nothing: opening the Topic by its id again would write into whichever
+// Topic has the id by then.
+func (c *Core) writeOpenedTopic(ctx context.Context, home, topic *os.Root, topicID string, p plan, dryRun bool) (*event, error) {
 	if dryRun {
 		return c.planDryRun(home, topic, topicID, p)
 	}

@@ -173,13 +173,16 @@ func (c *Core) RunCheck(ctx context.Context, topicID, lessonID string, opts Chec
 	if _, err := requireStudiedLesson(s, topicID, lessonID); err != nil {
 		return Attempt{}, err
 	}
+	// The folder stays open until the Attempt is recorded, in this folder or
+	// not at all: a Topic removed or replaced while its Check runs must not
+	// get the Attempt of work it does not hold.
 	home, topic, err := c.openTopicFolder(topicID)
 	if err != nil {
 		return Attempt{}, err
 	}
+	defer home.Close()
+	defer topic.Close()
 	check, version, err := readCheck(topic, lessonID)
-	topic.Close()
-	home.Close()
 	if err != nil {
 		return Attempt{}, err
 	}
@@ -206,7 +209,7 @@ func (c *Core) RunCheck(ctx context.Context, topicID, lessonID string, opts Chec
 	case blindSpot(err):
 		// Nothing runs on work the snapshot cannot see whole.
 		d.Outcome, d.Reason = OutcomeErrored, blindSpotReason(practice, err)
-		return c.recordAttempt(ctx, topicID, d, nil)
+		return c.recordAttempt(ctx, home, topic, topicID, d, nil)
 	case err != nil:
 		return Attempt{}, checkpointError(topicID, dir, err)
 	}
@@ -280,7 +283,7 @@ func (c *Core) RunCheck(ctx context.Context, topicID, lessonID string, opts Chec
 			d.Outcome = worse(d.Outcome, r.Outcome)
 		}
 	}
-	return c.recordAttempt(ctx, topicID, d, d.Criteria)
+	return c.recordAttempt(ctx, home, topic, topicID, d, d.Criteria)
 }
 
 // workAfter snapshots the work after the run criteria, and makes the Attempt
@@ -352,17 +355,19 @@ func boolInt(b bool) int {
 	return 0
 }
 
-// recordAttempt records an Attempt and returns it with the output of each
-// run criterion, which is shown but never recorded: it could reveal test
-// data. Whether each held_out result is the counted measurement is decided
-// under the Topic's lock, from the History as it stands.
-func (c *Core) recordAttempt(ctx context.Context, topicID string, d attemptRecordedData, shown []CriterionResult) (Attempt, error) {
+// recordAttempt records an Attempt in the Topic folder its Check was read
+// from, and returns it with the output of each run criterion, which is shown
+// but never recorded: it could reveal test data. Whether each held_out
+// result is the counted measurement is decided under the Topic's lock, from
+// the History as it stands.
+func (c *Core) recordAttempt(ctx context.Context, home, topic *os.Root, topicID string, d attemptRecordedData,
+	shown []CriterionResult) (Attempt, error) {
 	d.Criteria = make([]CriterionResult, len(shown))
 	for i, r := range shown {
 		r.Output = ""
 		d.Criteria[i] = r
 	}
-	ev, err := c.writeTopic(ctx, topicID, func(s *replayed, _ *topicView) (*change, error) {
+	ev, err := c.writeOpenedTopic(ctx, home, topic, topicID, func(s *replayed, _ *topicView) (*change, error) {
 		ls := s.study.lessons[d.Lesson]
 		for i := range d.Criteria {
 			r := &d.Criteria[i]
