@@ -1,5 +1,9 @@
 # Lamplight v2 design
 
+> This copy is from 1 October 2026. The design has changed since, and the current one is on
+> the [`v2` branch](https://github.com/mordor-forge/study-skill/blob/v2/docs/design/lamplight-v2.md).
+> One change: Lamplight v2 does not use NotebookLM (ADR-0011 there).
+
 Lamplight is an interactive tutor for one learner. v2 turns the v1 `study` skill into a Go
 program that owns all study state, with a thin skill that teaches through it. Terms in
 **bold** are defined in [CONTEXT.md](../../CONTEXT.md). Lasting decisions are recorded in

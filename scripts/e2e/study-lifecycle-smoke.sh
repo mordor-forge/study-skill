@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# A commit hook runs this with GIT_DIR and GIT_INDEX_FILE set to the repository
+# being committed. Left in place, they aim the git commands below at that
+# repository instead of the test workspace.
+# shellcheck disable=SC2046
+unset $(git rev-parse --local-env-vars)
+
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 WORKDIR="$(mktemp -d)"
 trap 'rm -rf "$WORKDIR"' EXIT

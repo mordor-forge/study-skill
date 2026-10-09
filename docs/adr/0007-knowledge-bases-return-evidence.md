@@ -2,7 +2,8 @@
 
 ## Status
 
-Accepted
+Accepted. On the `v2` branch, ADR-0011 replaces its v2.0 part: Lamplight does not use
+NotebookLM. This copy on `main` predates that.
 
 ## Context
 
