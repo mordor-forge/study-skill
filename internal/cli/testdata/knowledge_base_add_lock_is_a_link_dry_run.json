@@ -1,0 +1,7 @@
+{
+  "ok": false,
+  "error": {
+    "code": "failed_precondition",
+    "message": "$HOME/.config/lamplight/knowledge-base-plugins.lock is not a regular file. study keeps the lock of the Knowledge base plugin registry under that name, and follows no link to it: delete it, or move it away"
+  }
+}

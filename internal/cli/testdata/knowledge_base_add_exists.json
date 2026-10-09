@@ -1,0 +1,7 @@
+{
+  "ok": false,
+  "error": {
+    "code": "already_exists",
+    "message": "a Knowledge base plugin named shelf is registered already, as something else (study knowledge-base list shows it): pass --replace to register this one in its place, or give this one another name"
+  }
+}

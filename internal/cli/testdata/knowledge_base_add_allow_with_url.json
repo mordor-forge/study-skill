@@ -1,0 +1,7 @@
+{
+  "ok": false,
+  "error": {
+    "code": "invalid_argument",
+    "message": "--allow-study-home-arguments goes with a command, and Knowledge base plugin remote is given a URL"
+  }
+}

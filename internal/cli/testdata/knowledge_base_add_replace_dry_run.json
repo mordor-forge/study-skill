@@ -1,0 +1,18 @@
+{
+  "ok": true,
+  "data": {
+    "plugin": {
+      "name": "remote",
+      "command": [
+        "$HOME/bin/notes-kb"
+      ]
+    },
+    "registry": "$HOME/.config/lamplight/knowledge-base-plugins.json",
+    "replaced": {
+      "name": "remote",
+      "url": "http://localhost:8765/mcp"
+    },
+    "changed": true,
+    "dry_run": true
+  }
+}

@@ -1,0 +1,2 @@
+Registered Knowledge base plugin kb on this computer: $HOME/bin/study-shelf -u $HOME/study/go-concurrency/kb.py
+! Its arguments inside the Study home are allowed: your agent can change what they name.

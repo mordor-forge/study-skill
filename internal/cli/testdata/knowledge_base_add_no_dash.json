@@ -1,0 +1,7 @@
+{
+  "ok": false,
+  "error": {
+    "code": "usage",
+    "message": "put the command that starts the plugin after --: study knowledge-base add <name> -- <command> [args...], or study knowledge-base add <name> --url <URL>"
+  }
+}

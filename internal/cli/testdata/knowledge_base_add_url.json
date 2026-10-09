@@ -1,0 +1,11 @@
+{
+  "ok": true,
+  "data": {
+    "plugin": {
+      "name": "remote",
+      "url": "http://localhost:8765/mcp"
+    },
+    "registry": "$HOME/.config/lamplight/knowledge-base-plugins.json",
+    "changed": true
+  }
+}

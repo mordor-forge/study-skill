@@ -1,0 +1,7 @@
+{
+  "ok": false,
+  "error": {
+    "code": "invalid_argument",
+    "message": "argument 1 of the command, \"--config=kb.toml\", names a file in $HOME, the folder study was started in. A Knowledge base plugin is started from the registry's folder, not from there, so it would not find the file: give the file's full path. If the argument is no file's name, register the plugin from another folder"
+  }
+}

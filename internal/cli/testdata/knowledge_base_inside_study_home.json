@@ -1,0 +1,7 @@
+{
+  "ok": false,
+  "error": {
+    "code": "failed_precondition",
+    "message": "Lamplight's configuration folder, $HOME/.config/lamplight, is inside the Study home, $HOME, or is reached through it. Your agent can write there, so the Knowledge base plugin registry in that folder is not read: it decides which programs study starts. Keep the two apart: set XDG_CONFIG_HOME to a folder outside the Study home that no link in the Study home leads to, or move the Study home"
+  }
+}

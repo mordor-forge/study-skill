@@ -1,0 +1,14 @@
+{
+  "ok": true,
+  "data": {
+    "plugin": {
+      "name": "notes",
+      "command": [
+        "$HOME/bin/notes-kb",
+        "$HOME/notes"
+      ]
+    },
+    "registry": "$HOME/.config/lamplight/knowledge-base-plugins.json",
+    "changed": true
+  }
+}

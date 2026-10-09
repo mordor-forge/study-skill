@@ -1,0 +1,7 @@
+{
+  "ok": false,
+  "error": {
+    "code": "newer_format",
+    "message": "$HOME/.config/lamplight/knowledge-base-plugins.json has format 2, but this version of study only understands format 1: upgrade study"
+  }
+}

@@ -1,0 +1,3 @@
+No Knowledge base plugins are registered on this computer. Register one with:
+  study knowledge-base add <name> -- <command> [args...]
+  study knowledge-base add <name> --url <URL>

@@ -1,0 +1,7 @@
+{
+  "ok": false,
+  "error": {
+    "code": "not_found",
+    "message": "there is no program named \"study-shelf-nightly\" in the folders of your PATH: install it, or give the path to it"
+  }
+}

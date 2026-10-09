@@ -292,10 +292,19 @@ func (e *Error) Unwrap() error { return e.Err }
 
 // CodeOf returns the code of err, or CodeInternal for errors the core did not
 // classify.
+//
+// An error of a package the core builds on carries its code itself, through
+// an ErrorCode method: the Knowledge base plugin registry's errors do, which
+// reach the command line without passing through the core. Their codes are
+// among the ones above.
 func CodeOf(err error) ErrorCode {
 	var e *Error
 	if errors.As(err, &e) {
 		return e.Code
+	}
+	var coded interface{ ErrorCode() string }
+	if errors.As(err, &coded) {
+		return ErrorCode(coded.ErrorCode())
 	}
 	return CodeInternal
 }

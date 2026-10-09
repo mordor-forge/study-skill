@@ -1,0 +1,7 @@
+{
+  "ok": false,
+  "error": {
+    "code": "usage",
+    "message": "--url needs the plugin's http or https address"
+  }
+}

@@ -97,6 +97,20 @@ Lamplight's; what is behind them is the plugin's.
   `status` gives the one action that fixes it. So is one whose plugin does not start or
   does not speak the contract.
 
+Building the registry showed that three of these rules needed more than they say:
+
+- "Inside the Study home" is decided by file identity, at every step on the way to a folder
+  or a program, from folders that are already open. Deciding from names let an agent repoint
+  a link between the check and the use, and let another letter case through on a file
+  system that ignores case.
+- A command's arguments are checked as its program is. `python3` with a script inside the
+  Study home is refused unless the learner allows it when registering, and the registry
+  records that they did. This catches the honest mistake and is not a guarantee: a command
+  such as `sh -c` decides more when it starts than any check can see.
+- What writes the registry is in a package that only the CLI imports, and a test checks
+  that the MCP server's dependencies do not contain it. A rule about names was passed by
+  one wrapper function.
+
 ADR-0009 stands: the core runs nothing that a Topic's files name.
 
 ### Indexing runs only through the CLI

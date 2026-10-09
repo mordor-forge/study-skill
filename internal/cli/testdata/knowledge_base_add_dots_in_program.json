@@ -1,0 +1,7 @@
+{
+  "ok": false,
+  "error": {
+    "code": "invalid_argument",
+    "message": "the program's path, \"$HOME/bin/../bin/study-shelf\", has .. in it, which leads to different places by name and through a symbolic link: give the path without it"
+  }
+}

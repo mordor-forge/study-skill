@@ -1,0 +1,5 @@
+Knowledge base plugins on this computer:
+remote  http://localhost:8765/mcp
+shelf   $HOME/bin/study-shelf --recipe 'embedding gemma'
+  ! its program is inside the Study home, $HOME/bin, or is reached through it, where your agent can write, so study does not use this plugin: install the program outside the Study home, then register it again with study knowledge-base add shelf --replace -- <command>
+Registry: $HOME/.config/lamplight/knowledge-base-plugins.json

@@ -1,0 +1,7 @@
+{
+  "ok": false,
+  "error": {
+    "code": "usage",
+    "message": "\"study knowledge-base add\" takes one name before --, got 2: study knowledge-base add <name> -- <command> [args...], or study knowledge-base add <name> --url <URL>"
+  }
+}

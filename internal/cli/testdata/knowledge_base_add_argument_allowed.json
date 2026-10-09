@@ -1,0 +1,16 @@
+{
+  "ok": true,
+  "data": {
+    "plugin": {
+      "name": "kb",
+      "command": [
+        "$HOME/bin/study-shelf",
+        "-u",
+        "$HOME/study/go-concurrency/kb.py"
+      ],
+      "allow_study_home_arguments": true
+    },
+    "registry": "$HOME/.config/lamplight/knowledge-base-plugins.json",
+    "changed": true
+  }
+}

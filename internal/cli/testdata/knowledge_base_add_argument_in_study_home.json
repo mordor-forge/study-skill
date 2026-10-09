@@ -1,0 +1,7 @@
+{
+  "ok": false,
+  "error": {
+    "code": "invalid_argument",
+    "message": "argument 2 of the command, \"$HOME/study/go-concurrency/kb.py\", names something inside the Study home, $HOME/study, or reached through it, where your agent can write. study starts a Knowledge base plugin outside the agent's sandbox, so whatever the plugin loads from there, the agent decides. Keep it outside the Study home; or, if the plugin only reads it as data, register with --allow-study-home-arguments"
+  }
+}

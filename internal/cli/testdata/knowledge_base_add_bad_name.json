@@ -1,0 +1,7 @@
+{
+  "ok": false,
+  "error": {
+    "code": "invalid_argument",
+    "message": "\"My Shelf\" is not a valid name for a Knowledge base plugin: use lowercase letters, digits and single hyphens, up to 64 characters"
+  }
+}

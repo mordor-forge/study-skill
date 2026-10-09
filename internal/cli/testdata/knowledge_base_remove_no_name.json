@@ -1,0 +1,7 @@
+{
+  "ok": false,
+  "error": {
+    "code": "usage",
+    "message": "\"study knowledge-base remove\" takes 1 argument(s), got 0"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "ok": false,
+  "error": {
+    "code": "invalid_argument",
+    "message": "the URL is not a web address: give an absolute http or https URL, such as http://localhost:8765/mcp"
+  }
+}

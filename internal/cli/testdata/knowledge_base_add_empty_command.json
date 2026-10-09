@@ -1,0 +1,7 @@
+{
+  "ok": false,
+  "error": {
+    "code": "usage",
+    "message": "nothing follows --: give the command that starts the plugin"
+  }
+}

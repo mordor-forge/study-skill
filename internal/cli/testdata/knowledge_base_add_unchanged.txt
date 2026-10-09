@@ -1,0 +1,1 @@
+Knowledge base plugin shelf is registered that way already: nothing changed

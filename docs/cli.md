@@ -35,6 +35,9 @@ that scripts and agents can rely on. Terms follow [GLOSSARY.md](../GLOSSARY.md).
 | `study evidence record <topic> --lesson L --source S --quote Q [--location LOC --location-from F] [--dry-run]` | Records an exact quote from a Source that a Lesson cites. `--quote -` reads the quote from stdin. Recording the same Evidence twice changes nothing. |
 | `study evidence retract <topic> <evidence> [--dry-run]` | Takes back Evidence recorded by mistake. The retraction is recorded, never deleted; retracting twice changes nothing. |
 | `study evidence list <topic> [--lesson L] [--all]` | Lists the Evidence recorded in the Topic, or only what one Lesson cites. Retracted Evidence is listed only with `--all`. |
+| `study knowledge-base add <name> [--allow-study-home-arguments] [--replace] [--dry-run] (--url URL \| -- <command> [args...])` | Registers a Knowledge base plugin on this computer under a name, by the command that starts it, given after `--`, or by the http or https URL it answers at. The command's program is found on `PATH`, or at the path given, and registered by its absolute path. A program inside the Study home, or reached through it, is `invalid_argument`; so is an argument that names something there, unless `--allow-study-home-arguments` is given, and one that names a file relative to the folder `study` is started in. Registering a plugin as it is registered already changes nothing (`changed: false`); a name registered as something else is `already_exists` unless `--replace` is given. It records no Event, and agents have no tool for it. See [Knowledge base plugins](#knowledge-base-plugins). |
+| `study knowledge-base list` | Lists the Knowledge base plugins registered on this computer, by name, and where the registry is. A plugin `study` does not use as it is registered carries a `problem`. |
+| `study knowledge-base remove <name> [--dry-run]` | Removes a Knowledge base plugin from this computer's registry, leaving its program or service as it is; a name that is not registered is `not_found`. It records no Event, and agents have no tool for it. |
 | `study syllabus [topic]` | Shows a Topic's Syllabus (the Active topic's when none is named): Milestones and Lessons with their display numbers and status, the Revisions waiting for the learner with their change, and a hand edit of `syllabus.toml` (see [The Syllabus](#the-syllabus)). |
 | `study revision propose <topic> --summary S (--syllabus FILE \| --from-file) [--dry-run]` | Proposes a change to the Syllabus, the first one included. `--syllabus` names a file holding the whole Syllabus as it would be afterwards, as TOML like `syllabus.toml` or as JSON; `--from-file` proposes `syllabus.toml` as edited by hand. Nothing changes until the learner approves. |
 | `study revision apply <topic> <revision> [--learner-said S] [--dry-run]` | Applies a proposed Revision once the learner approves. On a terminal, study shows the change and asks the learner directly; an agent relaying their answer from the conversation passes their words with `--learner-said`. Answering no records a decline. |
@@ -114,9 +117,9 @@ Error codes:
 | `not_found` | The thing named does not exist. |
 | `newer_format` | A file was written by a newer version of `study`; upgrade to read it. |
 | `corrupt` | A file Lamplight reads is damaged or missing, for example invalid TOML after a hand edit, or a Topic's git repository is missing, was replaced during a Checkpoint, or leads outside the Topic. Fix or restore it; the message names it. |
-| `failed_precondition` | The request is valid but the Topic is not ready for it, for example a git merge is in progress or git has no identity. The message says what to do. |
+| `failed_precondition` | The request is valid but the Topic is not ready for it, for example a git merge is in progress or git has no identity; or the Knowledge base plugin registry is where study does not read it, such as inside the Study home. The message says what to do. |
 | `canceled` | The command was stopped, by SIGTERM or Ctrl-C, before it finished; what it would have recorded was not recorded. `study check` stops every program the Check started. |
-| `busy` | Another program is using the Topic: another `study` process writing to it for too long, an editor using its git repository, or files that kept changing while they were being saved. Try again shortly; the message says what to do if it persists. |
+| `busy` | Another program is using the Topic: another `study` process writing to it for too long, an editor using its git repository, or files that kept changing while they were being saved. Also another `study` process changing the Knowledge base plugin registry for too long. Try again shortly; the message says what to do if it persists. |
 | `unhealthy` | `study doctor` only: a Finding failed. `data` still holds the full diagnosis. |
 | `internal` | Anything else, such as a file that cannot be read. |
 
@@ -939,6 +942,10 @@ copies the workspace until its Topic is in place. Creating a Topic takes no lock
 restore of the same id cannot both succeed, because each moves a complete folder into
 place, and the move is refused when a folder that holds anything is there.
 
+`study knowledge-base add` and `study knowledge-base remove` record no Event either, and
+write nothing in the Study home: the registry they change is this computer's and no
+Topic's (see [Knowledge base plugins](#knowledge-base-plugins)).
+
 ## Sources and Evidence
 
 The Knowledge seam ([ADR-0007](adr/0007-knowledge-bases-return-evidence.md)) records where
@@ -1010,6 +1017,158 @@ service: the agent reads the Sources itself and records the quotes it relied on.
   change to the Source leaves one line. Under the one-machine-at-a-time contract, adding the
   same file or URL, or the same Evidence, on both machines before syncing gives two of them;
   that is not flagged.
+
+## Knowledge base plugins
+
+A Knowledge base plugin is a program, or a service the learner runs, that indexes Sources
+and searches them ([ADR-0012](adr/0012-knowledge-base-plugins-speak-one-contract.md)). Each
+computer registers the plugins it has, each under a name, with `study knowledge-base`.
+Registering is all this version does with a plugin: it starts and contacts none yet, and a
+Topic's Knowledge base is still `none`.
+
+- **The registry** is `knowledge-base-plugins.json` in Lamplight's configuration folder,
+  beside `config.toml`: `$XDG_CONFIG_HOME/lamplight`, or `~/.config/lamplight`. It is this
+  computer's and no Topic's, so changing it records no Event and writes nothing in the
+  Study home. Plugins are kept in order of name:
+
+  ```json
+  {
+    "format": 1,
+    "plugins": [
+      {"name": "notes", "command": ["/opt/kb/bin/notes-kb", "--root=/home/ada/study/notes"],
+       "allow_study_home_arguments": true},
+      {"name": "remote", "url": "http://localhost:8765/mcp"},
+      {"name": "shelf", "command": ["/usr/local/bin/study-shelf", "--stdio"]}
+    ]
+  }
+  ```
+
+  Change it with `study knowledge-base`, not by hand. The file is created readable by the
+  learner alone, since a URL may carry a key, and the configuration folder likewise when
+  it has to be created.
+- **A name** is what a Topic will call the plugin: lowercase letters, digits and single
+  hyphens, up to 64 characters, like a Topic's id. `none` and `plugin` are refused: they
+  are the kinds of Knowledge base a Topic records, and a name is never one of them.
+- **A command** follows `--`, as the learner would type it: the program, then its
+  arguments. It is an argument list, never a shell string, and everything after `--`
+  belongs to it, flags that look like study's own included.
+  - The program is found when it is registered and stored as an absolute path. A bare
+    name is looked up in the absolute folders of `PATH`. A relative one, such as `.` or an
+    empty entry, is passed over: it would let a file in a Topic stand for the program. A
+    path is taken from the folder `study` was started in, with a leading `~` for the home
+    folder. A program that is not found is `not_found`; a folder, or a file the learner
+    may not run, is `invalid_argument`. The system is asked whether the user `study` runs
+    as may run it, so an execute bit that is there for someone else does not count; on
+    `PATH` such a file is passed over, as a shell passes it over.
+  - A path with `..` in it is `invalid_argument`, and a folder of `PATH` with `..` in it
+    is passed over. By name, `..` goes up from a symbolic link; the operating system goes
+    up from where the link leads. The file registered could be another than the one that
+    would run.
+  - The path is kept as it was found, symbolic links unresolved, so a link a package
+    manager moves to each new version keeps working.
+  - The arguments are kept exactly as given, an empty one too. Each is valid UTF-8, at most
+    4,096 characters, and there are at most 100. Refused in them: control characters, the
+    characters that change the direction text is shown in (U+061C, U+200E, U+200F,
+    U+202A–U+202E and U+2066–U+2069, the ones `study` quotes before it prints anything),
+    and the replacement character U+FFFD.
+  - A plugin is started from the registry's folder, not from where its command was typed.
+    So an argument that names an existing file by a relative path is `invalid_argument`,
+    with advice to give its full path. A word is taken for such a path, as a whole or
+    after an `=`, when a regular file in the folder `study` is started in has that name,
+    or when it is written as a path, with a `/`, and anything there has that name. A bare
+    word that only a folder shares its name with, such as `build`, is left alone.
+- **Outside the Study home.** `study` starts a plugin outside the agent's sandbox, and the
+  agent writes in the Study home. So what a registration names must not be the agent's to
+  change.
+  - A program that is in the Study home, or is reached through it, is `invalid_argument`.
+    Through it means at any hop: the path is followed one name at a time, each symbolic
+    link from the folder that really holds it, and is refused as soon as it enters the
+    Study home, wherever it ends. A link outside that leads to a link in the Study home
+    that leads out again is refused, because the one in between is the agent's to repoint.
+  - An argument that names something there is `invalid_argument` too, unless
+    `--allow-study-home-arguments` is given. An argument is taken for a path when it is
+    absolute or starts with `~/`, as a whole or after its first `=` (`--script=/path`,
+    `CONF=/path`), and is followed like a program's path. The registry records that the
+    learner allowed it, as `allow_study_home_arguments`, only when there was something to
+    allow, and `add` and `list` say so. Allowing it for a plugin that is registered
+    already is a change to the registration, so it needs `--replace`.
+  - The Study home is known by what it is, not by what it is called: the folders are
+    compared by file identity. Another letter case of its name, on a file system that
+    ignores case, another link to it and another mount of it are all the Study home. A
+    Study home that is not there yet is known by where it will be, and is looked for again
+    at every folder on the way: one that another `study` makes meanwhile, a first
+    `study topic create` say, is the Study home from then on.
+  - **This catches the honest mistake and is not a guarantee.** A command such as `sh -c`,
+    `env` or `npx` resolves more when it starts than any reading of its arguments sees,
+    and a path inside a longer argument is not looked at. Nor can following a path see a
+    hard link: a second name, outside the Study home, for a file that also has a name
+    inside it. Keeping the agent from making one is the sandbox's job.
+- **A URL** (`--url`) is the http or https address of a plugin the learner runs as a
+  service. The scheme and host are lowercased and a default port is dropped. Refused: an
+  address with a user name or password, one with a `#fragment`, and a port that is 0 or
+  above 65535. No error repeats the address, which may hold a password or a key.
+- **A name that is registered**: registering it again the same way changes nothing and
+  writes nothing (`changed: false`). As something else, it is `already_exists`, unless
+  `--replace` is given: then the name stands for the new one, and the result carries what
+  it stood for in `replaced`.
+- **Where the registry may be**: the registry decides which programs `study` starts, so it
+  is read only where the agent cannot write it, or lead it elsewhere. Lamplight's
+  configuration folder is found once, one name at a time like a program's path, and
+  opened. From then on everything is read, locked and written through the open folder,
+  never through its name again, so nothing can change between the check and the use. When
+  the folder is the Study home, is inside it, or is reached through it at any hop, the
+  registry is not read at all, whatever it holds, and none is made: every
+  `study knowledge-base` command fails with `failed_precondition` and says how to keep
+  the two apart. The same holds when `XDG_CONFIG_HOME`, or `HOME` when it places the
+  folder, is not an absolute path, since the registry would then be wherever `study` is
+  started, inside a Topic too. Everything else in `study` works as before.
+- **A registry study cannot use**: one in a newer format is `newer_format`, and is never
+  rewritten; the format is read before anything else is judged, so a newer registry of
+  another shape is still newer, not damaged. A damaged one is `corrupt`, with where it is
+  and the two ways out: fix it by hand, or delete it and register the plugins again.
+  Damaged means anything but what `study` itself writes: not UTF-8 or not JSON; no format
+  number, or the format given twice; a key this version does not know, a key in another
+  letter case, or a key given twice; a `null`; a name registered twice; an entry with
+  both a command and a URL, or with neither; a program not written as a clean absolute
+  path (no `..`, no `.`, no doubled slash); a URL not written as `add` cleans it; or a
+  name, an argument or a URL that `add` would refuse. The registry must be a regular
+  file: a symbolic link is not followed. A change never writes what the next command would
+  call damaged: one that would make the registry larger than the 1 MiB `study` reads is
+  `failed_precondition`.
+- **Two changes at once** never lose each other's: a change takes the lock of
+  `knowledge-base-plugins.lock`, beside the registry, reads the registry again under it,
+  and replaces the file whole, so a crash leaves the registry as it was or as it should be.
+  The lock is a regular file of its own: a symbolic link under its name is not followed.
+  The next change removes a temporary file a crash left. A change waits for another one
+  under way, for 30 seconds at most (`busy`), and reports `canceled` when it is stopped
+  while it waits.
+- **A dry run** takes no lock, waits for nothing and makes nothing, the configuration
+  folder included; nor does a change that changes nothing or cannot be made. It looks at
+  everything the change needs on this computer and fails where the real run would, with
+  the same message: a configuration folder that cannot be written in; one that is not
+  there and cannot be made, because the folder that would hold it cannot be written in;
+  one that is a file, or a symbolic link that leads nowhere; a lock that is not a regular
+  file or cannot be opened; a registry that cannot be read. Each is `failed_precondition`
+  and says how to put it right.
+
+`add` returns `{"plugin": {"name", "command"? | "url"?, "allow_study_home_arguments"?},
+"registry": path, "replaced"?: {...}, "changed": bool}`, `remove` returns
+`{"plugin": {...}, "registry": path}` with the plugin as it was registered, and `list`
+returns `{"registry": path, "plugins": [...]}`, where `registry` is given whether or not
+the file exists yet. A dry run adds `"dry_run": true` and reports what the real run would.
+
+In `list`, a plugin can carry a `problem`: its program, or an argument the learner did not
+allow, is inside the Study home this `study` uses or is reached through it. That is
+checked at every listing, because the Study home can be another than when the plugin was
+registered, and a link can come to lead elsewhere. `study` does not use such a plugin;
+the `problem` says how to register it again.
+
+Shell completion offers the registered names to `study knowledge-base remove`, and to
+`study knowledge-base add --replace`.
+
+These commands are for the learner. No MCP tool registers, changes or removes a plugin, and
+none takes a command line or a URL for one: what changes the registry is in a part of
+`study` the MCP server is not built from.
 
 ## study doctor
 

@@ -1,0 +1,7 @@
+{
+  "ok": false,
+  "error": {
+    "code": "usage",
+    "message": "give the command that starts the plugin after --, or its address with --url"
+  }
+}

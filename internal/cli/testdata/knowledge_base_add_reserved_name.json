@@ -1,0 +1,7 @@
+{
+  "ok": false,
+  "error": {
+    "code": "invalid_argument",
+    "message": "\"none\" cannot name a Knowledge base plugin: it is a kind of Knowledge base, which a Topic records beside the name of its plugin"
+  }
+}

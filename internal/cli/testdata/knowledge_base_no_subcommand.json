@@ -1,0 +1,7 @@
+{
+  "ok": false,
+  "error": {
+    "code": "usage",
+    "message": "\"study knowledge-base\" needs a subcommand: add, list, remove"
+  }
+}

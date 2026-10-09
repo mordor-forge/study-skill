@@ -1,0 +1,1 @@
+Registered Knowledge base plugin remote on this computer: http://localhost:8765/mcp?recipe=gemma&top=5

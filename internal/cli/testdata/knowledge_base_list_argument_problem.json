@@ -1,0 +1,26 @@
+{
+  "ok": true,
+  "data": {
+    "registry": "$HOME/.config/lamplight/knowledge-base-plugins.json",
+    "plugins": [
+      {
+        "name": "kb",
+        "command": [
+          "$HOME/bin/study-shelf",
+          "-u",
+          "$HOME/study/go-concurrency/kb.py"
+        ],
+        "allow_study_home_arguments": true
+      },
+      {
+        "name": "notes",
+        "command": [
+          "$HOME/bin/notes-kb",
+          "=serve",
+          "--root=$HOME/notes"
+        ],
+        "problem": "argument 2 of its command, \"--root=$HOME/notes\", names something inside the Study home, $HOME/notes, or reached through it, where your agent can write, and the plugin was not registered to allow that, so study does not use it: register it again with study knowledge-base add notes --replace, without that argument or with --allow-study-home-arguments"
+      }
+    ]
+  }
+}

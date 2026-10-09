@@ -1,0 +1,22 @@
+{
+  "ok": true,
+  "data": {
+    "plugin": {
+      "name": "shelf",
+      "command": [
+        "$HOME/bin/notes-kb",
+        "--stdio"
+      ]
+    },
+    "registry": "$HOME/.config/lamplight/knowledge-base-plugins.json",
+    "replaced": {
+      "name": "shelf",
+      "command": [
+        "$HOME/bin/study-shelf",
+        "--recipe",
+        "embedding gemma"
+      ]
+    },
+    "changed": true
+  }
+}

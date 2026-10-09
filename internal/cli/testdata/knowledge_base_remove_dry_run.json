@@ -1,0 +1,15 @@
+{
+  "ok": true,
+  "data": {
+    "plugin": {
+      "name": "shelf",
+      "command": [
+        "$HOME/bin/study-shelf",
+        "--recipe",
+        "embedding gemma"
+      ]
+    },
+    "registry": "$HOME/.config/lamplight/knowledge-base-plugins.json",
+    "dry_run": true
+  }
+}

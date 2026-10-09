@@ -1,0 +1,7 @@
+{
+  "ok": false,
+  "error": {
+    "code": "corrupt",
+    "message": "$HOME/.config/lamplight/knowledge-base-plugins.json is damaged (shelf: its program is not an absolute path as study writes one): fix it by hand, or delete it and register your Knowledge base plugins again with study knowledge-base add"
+  }
+}

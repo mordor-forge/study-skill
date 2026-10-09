@@ -1,0 +1,7 @@
+{
+  "ok": false,
+  "error": {
+    "code": "invalid_argument",
+    "message": "the URL has a #fragment, which means nothing to a plugin: give the address without it"
+  }
+}

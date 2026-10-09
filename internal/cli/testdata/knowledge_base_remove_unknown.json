@@ -1,0 +1,7 @@
+{
+  "ok": false,
+  "error": {
+    "code": "not_found",
+    "message": "no Knowledge base plugin named notes is registered on this computer: study knowledge-base list shows the ones that are"
+  }
+}

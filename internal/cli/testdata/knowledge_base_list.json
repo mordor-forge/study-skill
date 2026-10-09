@@ -1,0 +1,20 @@
+{
+  "ok": true,
+  "data": {
+    "registry": "$HOME/.config/lamplight/knowledge-base-plugins.json",
+    "plugins": [
+      {
+        "name": "remote",
+        "url": "http://localhost:8765/mcp"
+      },
+      {
+        "name": "shelf",
+        "command": [
+          "$HOME/bin/study-shelf",
+          "--recipe",
+          "embedding gemma"
+        ]
+      }
+    ]
+  }
+}

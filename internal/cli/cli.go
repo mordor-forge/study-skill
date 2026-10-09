@@ -45,7 +45,7 @@ func Run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 	if opts.Getenv == nil {
 		opts.Getenv = os.Getenv
 	}
-	a := &app{opts: opts, stdin: stdin, stdout: stdout, stderr: stderr,
+	a := &app{opts: opts, args: args, stdin: stdin, stdout: stdout, stderr: stderr,
 		out: colorprofile.NewWriter(stdout, environ(opts.Getenv))}
 	defer func() { a.logs.close() }()
 	root := a.rootCommand()
@@ -97,7 +97,10 @@ func CommandTree() *cobra.Command {
 }
 
 type app struct {
-	opts   core.Options
+	opts core.Options
+	// args is the command line as study was given it. Only completions read
+	// it, for what cobra does not tell them.
+	args   []string
 	stdin  io.Reader
 	stdout io.Writer
 	stderr io.Writer
@@ -420,6 +423,7 @@ func (a *app) rootCommand() *cobra.Command {
 
 	root.AddCommand(status, topic, a.checkpointCommand(), a.checkCommand(), a.libraryCommand(), doctor, serve)
 	root.AddCommand(a.sourceCommand(), a.evidenceCommand(), a.syllabusCommand(), a.revisionCommand(), a.cardCommand(), a.reviewCommand())
+	root.AddCommand(a.knowledgeBaseCommand())
 	root.AddCommand(a.importCommand())
 	root.AddCommand(a.sessionCommand())
 	root.AddCommand(a.taskCommand())

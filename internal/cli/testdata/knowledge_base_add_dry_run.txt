@@ -1,0 +1,1 @@
+Would register Knowledge base plugin shelf on this computer: $HOME/bin/study-shelf --recipe 'embedding gemma' ''

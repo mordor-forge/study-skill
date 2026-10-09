@@ -1,0 +1,2 @@
+Registered Knowledge base plugin shelf on this computer: $HOME/bin/notes-kb
+It replaces: $HOME/bin/study-shelf --recipe 'embedding gemma' ''
