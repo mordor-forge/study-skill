@@ -349,8 +349,10 @@ SQLite's, ending in `-wal` and `-shm`.
 - `study` starts Shelf for each thing it asks and stops it again, so several run at once:
   a `study status` in one terminal while `study source index` works in another. Each
   finds what another indexed, and says of a Source another is indexing that it is being
-  indexed, and how far. Why a Source failed is kept in the collection, so it is still
-  said the next day.
+  indexed, and how far: as soon as the other was asked for it, while it waits for its
+  turn too. When a third is writing a book into the same collection at that moment, it
+  says so once that writing is over. Why a Source failed is kept in the collection, so
+  it is still said the next day.
 - Each file carries a format number. A file written by a newer Shelf is refused, with the
   reason, and left as it is. The format is 2 since Shelf keeps vectors. A file in format 1,
   which a Shelf from before embedding search wrote, is read as it is, and becomes one in

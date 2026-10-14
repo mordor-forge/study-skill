@@ -4,6 +4,7 @@ package shelf_test
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"fmt"
 	"os"
@@ -11,13 +12,16 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 	_ "modernc.org/sqlite"
 
 	"github.com/mordor-forge/lamplight/v2/internal/plugincontract"
 	"github.com/mordor-forge/lamplight/v2/internal/plugintest"
+	"github.com/mordor-forge/lamplight/v2/internal/shelf"
 	"github.com/mordor-forge/lamplight/v2/internal/shelf/shelftest"
 )
 
@@ -569,6 +573,199 @@ func TestAGlanceSeesWhatAnotherStudyShelfIsIndexing(t *testing.T) {
 		t.Errorf("indexed after the kill, a search finds %d of the two last pages", len(found))
 	}
 	integrity(t, computer.DataFolder("conformance"), "glanced")
+}
+
+// A Source that waits for its turn is being indexed, for every copy of
+// Shelf, from the moment index answers: a study status in another terminal,
+// while a study source index has more Sources than it works on at once,
+// would otherwise offer to index the ones that wait. index waits a moment
+// for the other copies to be told, and no longer: it answers at once while
+// another copy writes a book into the index. And once cancel has answered,
+// no copy says the Source is being indexed.
+func TestAGlanceSeesASourceThatWaitsForItsTurn(t *testing.T) {
+	warm(t)
+	computer := plugintest.NewComputer(t)
+	folder := computer.DataFolder("conformance")
+	if err := os.MkdirAll(folder, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	// One Source at a time, and the first is held once its pages are read,
+	// until the test lets it go: the one slot is taken for as long as the
+	// test needs it.
+	reading, held := make(chan struct{}), make(chan struct{})
+	read := sync.OnceFunc(func() { close(reading) })
+	plugin := shelf.New(shelf.Options{Folder: folder, Settings: shelf.Settings{Workers: 1}, Crash: func(point string) {
+		if point == shelf.PointPagesRead {
+			read()
+			<-held
+		}
+	}})
+	t.Cleanup(plugin.Close)
+	let := sync.OnceFunc(func() { close(held) })
+	t.Cleanup(let)
+	indexer := connect(t, plugin)
+
+	first := file(t, "first.a1", pdf([]string{"The first book speaks of spectra."}))
+	waiting := file(t, "waiting.b2", pdf([]string{"The second book speaks of sheaves."}))
+	indexer.index("turns", first)
+	select {
+	case <-reading:
+	case <-time.After(patience):
+		t.Fatal("the first book was never read")
+	}
+	// The glance is there before the Source is asked for, and looks right
+	// after index has answered.
+	glance, _ := run(t, computer)
+
+	// Another copy writes into the index for a moment as the Source is
+	// asked for, twice, from two sessions: telling the others waits for the
+	// writing, and both answers wait for that, the one that finds the work
+	// under way too.
+	done := writing(t, folder, "turns")
+	go func() {
+		time.Sleep(500 * time.Millisecond)
+		done()
+	}()
+	var earlier error
+	var once sync.WaitGroup
+	once.Go(func() { _, earlier = indexing(indexer, "turns", waiting) })
+	time.Sleep(150 * time.Millisecond)
+	if _, err := indexing(connect(t, plugin), "turns", waiting); err != nil {
+		t.Fatalf("index of %s, asked for again: %v", waiting.ID, err)
+	}
+	status := glance.status("turns")
+	if now, listed := status[waiting.ID]; !listed || now.State != plugincontract.StateIndexing || now.Hash != "" {
+		t.Fatalf("a glance says %+v (listed: %v) of a Source another study-shelf has been asked for and works on next; want it being indexed, with no hash", now, listed)
+	}
+	if now, listed := status[first.ID]; !listed || now.State != plugincontract.StateIndexing {
+		t.Errorf("a glance says %+v (listed: %v) of the Source another study-shelf is reading; want it being indexed", now, listed)
+	}
+	if once.Wait(); earlier != nil {
+		t.Fatalf("index of %s: %v", waiting.ID, earlier)
+	}
+	// Stopped while it waits, it was being indexed, and no copy says so any
+	// longer.
+	if !indexer.cancel("turns", waiting.ID) {
+		t.Error("cancel says it stopped nothing of a Source that waited for its turn")
+	}
+	if now, listed := glance.status("turns")[waiting.ID]; listed {
+		t.Errorf("once cancel has answered, a glance says %+v of the Source it stopped; want nothing", now)
+	}
+
+	// Another copy writes for longer than an answer may take, while several
+	// sessions ask for Sources at once. Each is answered all the same, well
+	// before SQLite would give up waiting for the writer, and none waits for
+	// another's wait. The other copies are told once the writing is over.
+	asked := []plugincontract.Source{waiting}
+	for n := range 7 {
+		asked = append(asked, file(t, fmt.Sprintf("more.c%d", n), pdf([]string{"A book that waits for its turn."})))
+	}
+	done = writing(t, folder, "turns")
+	took, refused := make([]time.Duration, len(asked)), make([]error, len(asked))
+	var asking sync.WaitGroup
+	for n, source := range asked {
+		session := connect(t, plugin)
+		asking.Go(func() { took[n], refused[n] = indexing(session, "turns", source) })
+	}
+	asking.Wait()
+	for n, err := range refused {
+		if err != nil {
+			t.Fatalf("index of %s: %v", asked[n].ID, err)
+		}
+	}
+	if slowest := slices.Max(took); slowest > 4*time.Second {
+		t.Errorf("of %d Sources asked for at once while another copy wrote into the index, the last was answered after %s: each is answered at once", len(asked), slowest)
+	}
+	// A Source of another collection is shown at once all the same: the
+	// writer that is held is the first collection's.
+	apart := file(t, "apart.d4", pdf([]string{"A book of another Topic."}))
+	indexer.index("apart", apart)
+	if now, listed := glance.status("apart")[apart.ID]; !listed || now.State != plugincontract.StateIndexing {
+		t.Errorf("while another copy wrote into one collection, a glance says %+v (listed: %v) of a Source asked for in another; want it being indexed", now, listed)
+	}
+	if !indexer.cancel("apart", apart.ID) {
+		t.Errorf("cancel says it stopped nothing of %s, which waited for its turn", apart.ID)
+	}
+	done()
+	for deadline := time.Now().Add(patience); ; time.Sleep(10 * time.Millisecond) {
+		status, shown := glance.status("turns"), 0
+		for _, source := range asked {
+			now, listed := status[source.ID]
+			switch {
+			case listed && now.State == plugincontract.StateIndexing:
+				shown++
+			case listed:
+				// Its work could not begin: the wait for the writer was too
+				// long, or too many waited at once.
+				t.Fatalf("once the other copy's writing was over, a glance says %+v of %s; want it being indexed", now, source.ID)
+			}
+		}
+		if shown == len(asked) {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("once the other copy's writing was over, a glance said %d of the %d Sources asked for meanwhile are being indexed", shown, len(asked))
+		}
+	}
+	for _, source := range asked {
+		if !indexer.cancel("turns", source.ID) {
+			t.Errorf("cancel says it stopped nothing of %s, which waited for its turn", source.ID)
+		}
+	}
+
+	// The first is indexed once it is let go, and the other when it is asked
+	// for again.
+	let()
+	if now, _ := indexer.settled("turns", first.ID); now.State != plugincontract.StateIndexed {
+		t.Errorf("the first book let go of: %+v", now)
+	}
+	indexer.indexed("turns", waiting)
+	if found := glance.search("turns", "sheaves", 5); len(found) != 1 {
+		t.Errorf("a glance finds the Source indexed after its cancel %d times", len(found))
+	}
+}
+
+// indexing asks a Shelf to index a Source, from a goroutine of the test's
+// own, and returns how long the answer took. It fails nothing itself: a test
+// fails only from its own goroutine.
+func indexing(s *session, collection string, source plugincontract.Source) (time.Duration, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), patience)
+	defer cancel()
+	began := time.Now()
+	res, err := s.cs.CallTool(ctx, &mcp.CallToolParams{Name: plugincontract.ToolIndex,
+		Arguments: plugincontract.IndexInput{Collection: collection, Source: source}})
+	took := time.Since(began)
+	if err == nil && res.IsError {
+		err = fmt.Errorf("refused: %+v", res.StructuredContent)
+	}
+	return took, err
+}
+
+// writing holds the one writer of a collection, as another copy of Shelf
+// does while it writes a book into the index, until the function it returns
+// is called.
+func writing(t *testing.T, folder, collection string) (done func()) {
+	t.Helper()
+	db, err := sql.Open("sqlite", filepath.Join(folder, collection+".sqlite"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	conn, err := db.Conn(ctx)
+	if err == nil {
+		_, err = conn.ExecContext(ctx, "BEGIN IMMEDIATE")
+	}
+	if err != nil {
+		_ = db.Close()
+		t.Fatalf("the writer of collection %s could not be held: %v", collection, err)
+	}
+	done = sync.OnceFunc(func() {
+		_, _ = conn.ExecContext(ctx, "ROLLBACK")
+		_ = conn.Close()
+		_ = db.Close()
+	})
+	t.Cleanup(done)
+	return done
 }
 
 // Two study-shelf programs on one folder, a glance beside a study source

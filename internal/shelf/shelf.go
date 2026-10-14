@@ -185,13 +185,18 @@ type Shelf struct {
 	fetcher   *web.Fetcher
 	// slots are held by the Sources being worked on.
 	slots chan struct{}
+	// beginning is held, in each collection, by the one work that is
+	// beginning there (job.begun).
+	beginning map[string]chan struct{}
 
 	// asking makes one request to index wait for the one before it.
 	asking sync.Mutex
 
 	mu sync.Mutex
 	// jobs are the Sources being indexed now. A job is in it from the
-	// moment index answers until what it came to is in the index.
+	// moment index answers until what it came to is in the index. The
+	// other copies of Shelf see it from the moment its work has begun
+	// (job.begun), whether it waits for a slot or not.
 	jobs map[key]*job
 	// unwritten are the reasons of failures that could not be written to
 	// the index, where every other failure is kept: the index itself was
@@ -211,6 +216,7 @@ func New(opts Options) *Shelf {
 		settings:  settings,
 		fetcher:   web.NewFetcher(settings.Fetch, Name+"/"+VersionString()+" (+https://github.com/mordor-forge/lamplight)"),
 		slots:     make(chan struct{}, settings.Workers),
+		beginning: map[string]chan struct{}{},
 		jobs:      map[key]*job{},
 		unwritten: map[key]string{},
 		at:        opts.Crash,
@@ -227,6 +233,14 @@ func New(opts Options) *Shelf {
 // input has closed, after a glance at what is indexed, and two seconds
 // otherwise.
 const StopsWithin = 150 * time.Millisecond
+
+// beginsWithin is how long index waits for the work it starts to have
+// begun, before it answers: shown to the other copies of Shelf, which a
+// glance from one of them right after the answer finds. Beginning is one
+// short write. When another copy holds the index for longer, writing a book
+// into it, index answers without waiting further, as it must at once, and
+// the work begins as soon as it can.
+const beginsWithin = time.Second
 
 // Close stops whatever Shelf is indexing, and lets go of its folder. It
 // does not wait long (StopsWithin): an index that was being written is whole
@@ -347,6 +361,19 @@ func (s *Shelf) collection(ctx context.Context, name string, create bool) (*inde
 	return s.folder.Collection(ctx, name, create)
 }
 
+// beginner returns what the one work that is beginning in a collection
+// holds.
+func (s *Shelf) beginner(collection string) chan struct{} {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	turn := s.beginning[collection]
+	if turn == nil {
+		turn = make(chan struct{}, 1)
+		s.beginning[collection] = turn
+	}
+	return turn
+}
+
 // stored is what the index holds of a Source, and nil when it holds
 // nothing.
 func (s *Shelf) stored(ctx context.Context, k key) (*index.Source, error) {
@@ -428,6 +455,19 @@ func (s *Shelf) index(ctx context.Context, args json.RawMessage) (any, *pluginco
 	if refusal := read(args, &in); refusal != nil {
 		return nil, refusal
 	}
+	// The work this request starts, or finds under way for the same
+	// content, is waited for a moment (beginsWithin) once the next request
+	// has been let in: deferred before asking is locked, the wait runs after
+	// it is unlocked, and requests that arrive together wait together.
+	var started *job
+	defer func() {
+		if started != nil {
+			select {
+			case <-started.begun:
+			case <-time.After(beginsWithin):
+			}
+		}
+	}()
 	s.asking.Lock()
 	defer s.asking.Unlock()
 	k := key{in.Collection, in.Source.ID}
@@ -446,6 +486,7 @@ func (s *Shelf) index(ctx context.Context, args json.RawMessage) (any, *pluginco
 	// Work that was told to stop, and has not stopped yet, is no work on it.
 	if running != nil && running.indexes(in.Source) && running.ctx.Err() == nil {
 		s.mu.Unlock()
+		started = running
 		status, _ := statusOf(have, working{job: running}, "", "")
 		return plugincontract.IndexResult{Source: status}, nil
 	}
@@ -502,7 +543,7 @@ func (s *Shelf) index(ctx context.Context, args json.RawMessage) (any, *pluginco
 	}
 
 	work, stop := context.WithCancel(context.Background())
-	j := &job{source: in.Source, vectorsOnly: vectorsOnly, ctx: work, stop: stop, done: make(chan struct{})}
+	j := &job{source: in.Source, vectorsOnly: vectorsOnly, ctx: work, stop: stop, begun: make(chan struct{}), done: make(chan struct{})}
 	s.mu.Lock()
 	if s.closing {
 		// Close has stopped what was being indexed, and starts nothing.
@@ -514,6 +555,7 @@ func (s *Shelf) index(ctx context.Context, args json.RawMessage) (any, *pluginco
 	s.jobs[k] = j
 	s.mu.Unlock()
 	go s.work(k, in, j)
+	started = j
 	status, _ := statusOf(have, working{job: j}, "", "")
 	return plugincontract.IndexResult{Source: status}, nil
 }

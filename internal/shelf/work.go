@@ -34,6 +34,9 @@ type job struct {
 	// ctx is done once the work is told to stop, which stop does.
 	ctx  context.Context
 	stop context.CancelFunc
+	// begun is closed once the work is shown to the other copies of Shelf,
+	// or could not be.
+	begun chan struct{}
 	// done is closed when the work has ended, and stopped then says that it
 	// ended because it was told to, with nothing of it in the index.
 	done    chan struct{}
@@ -92,25 +95,41 @@ func (s *Shelf) work(k key, in plugincontract.IndexInput, j *job) {
 		source.Address, asked = in.Source.URL, in.Source.URL
 	}
 
+	// From here on the other copies of Shelf see the Source being indexed,
+	// and no longer as the one whose last indexing failed: while it waits
+	// for its turn too, so that a study status in another terminal does not
+	// offer to index a Source that is next.
 	var c *index.Collection
 	var shown *index.Work
 	err := error(errStopped)
+	turn := s.beginner(k.collection)
 	select {
-	case s.slots <- struct{}{}:
-		// One of the few Sources that are worked on at once.
-		defer func() { <-s.slots }()
+	case turn <- struct{}{}:
+		// One work begins at a time in a collection. Beginning is a write,
+		// which waits for another copy of Shelf that is writing a book into
+		// the collection, on one of the few connections it has: the others
+		// are kept for what this copy reads of it meanwhile, status and
+		// index among it.
 		if c, err = s.collection(ctx, k.collection, true); err == nil {
-			// From here on the other copies of Shelf see the Source being
-			// indexed, and no longer as the one whose last indexing failed.
-			if shown, err = c.Begin(ctx, k.source); err == nil {
-				if j.vectorsOnly {
-					err = s.embedIndexed(ctx, c, in, j, shown)
-				} else {
-					err = s.run(ctx, in, source, j, shown)
-				}
-			}
+			shown, err = c.Begin(ctx, k.source)
 		}
+		<-turn
 	case <-ctx.Done():
+	}
+	close(j.begun)
+	if err == nil {
+		select {
+		case s.slots <- struct{}{}:
+			// One of the few Sources that are worked on at once.
+			defer func() { <-s.slots }()
+			if j.vectorsOnly {
+				err = s.embedIndexed(ctx, c, in, j, shown)
+			} else {
+				err = s.run(ctx, in, source, j, shown)
+			}
+		case <-ctx.Done():
+			err = errStopped
+		}
 	}
 
 	stopped := err != nil && ctx.Err() != nil
